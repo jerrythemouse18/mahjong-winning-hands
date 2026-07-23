@@ -4,6 +4,8 @@ A lightweight web app that helps players understand the winning combinations of 
 
 **No build step, no dependencies** — plain HTML/CSS/JavaScript. Open `index.html` in a browser and play.
 
+**▶ Live demo: https://jerrythemouse18.github.io/mahjong-winning-hands/**
+
 ## Features
 
 - **Full tile palette** — all 34 tile types (Characters 萬, Dots 筒, Bamboo 條, Winds, Dragons). Tap a tile repeatedly to add up to 4 copies; a badge shows how many you hold. Tap a tile in your hand to remove it.
