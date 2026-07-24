@@ -7,8 +7,9 @@ This document explains how the app is put together and how the analysis engine w
 The app is a dependency-free static site. Five scripts load in order and share globals (no modules, no bundler — deliberately simple for a prototype):
 
 ```
-tiles.js  →  engine.js  →  patterns.js  →  suggestions.js  →  app.js
-(data)       (win check)   (SG patterns)   (closeness)        (UI)
+tiles.js  →  engine.js  →  patterns.js  →  suggestions.js  →  scoring.js  →  app.js
+(data)       (win check)   (SG patterns)   (closeness +       (tai calc)     (UI)
+                                            discard advice)
 ```
 
 ## Tile representation
@@ -53,6 +54,28 @@ Two kinds of distance:
   - *Big Three Dragons*: missing dragon tiles + remaining shape distance.
 
 These heuristics are intentionally approximate — the goal is teaching ("you're closest to a Half Flush"), not optimal play. `suggestPatterns()` ranks all patterns by distance, breaking ties by difficulty, and the UI shows the top 5.
+
+## Discard advisor (`adviseDiscards`)
+
+For a 14-tile hand that isn't a win, try discarding each distinct tile in turn. For each candidate:
+
+1. compute the resulting 13-tile `standardShanten`;
+2. count **ukeire** — for every tile type that would lower the shanten (or complete a tenpai hand), add the number of copies still live: `4 − copies visible in your own hand`.
+
+Options sort by shanten ascending, then ukeire descending. The UI shows the top 3 with the accepted tiles rendered, and tapping a suggested tile performs the discard. The advisor targets the standard shape only; it doesn't strategise for Thirteen Wonders.
+
+## Tai scoring (`scoring.js`)
+
+`scoreHand(analysis, counts, ctx)` builds an itemised breakdown:
+
+1. **Hand patterns** from `matchPatterns` — except the generic dragon-pung pattern, which is replaced by per-dragon items (and skipped entirely when Little/Big Three Dragons already covers the pungs, to avoid double counting).
+2. **Seat and prevailing wind pungs** (1 tai each; both apply when the winds coincide).
+3. **Bonus tiles** — own flower/season (matching seat position), animals (1 tai each), and complete-set bonuses.
+4. **Win context** — self-draw, last tile, kong replacement, robbing the kong (1 tai each).
+
+The raw sum is capped at the 5-tai limit; the breakdown shows both. `describePayout` renders the common Singapore half/full payment scheme (payout doubles per tai: `2^tai` units).
+
+Table context lives in the UI state: seat wind, prevailing wind, a set of toggled bonus tiles, and win-context checkboxes — all passed to `scoreHand` on every update.
 
 ## Pattern matching (`patterns.js`)
 

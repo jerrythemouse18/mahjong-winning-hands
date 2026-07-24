@@ -11,7 +11,11 @@ A lightweight web app that helps players understand the winning combinations of 
 - **Full tile palette** — all 34 tile types (Characters 萬, Dots 筒, Bamboo 條, Winds, Dragons). Tap a tile repeatedly to add up to 4 copies; a badge shows how many you hold. Tap a tile in your hand to remove it.
 - **Live hand analysis** — the app re-evaluates on every tap:
   - At **13 tiles**: tells you if you're ready (tenpai) and displays every **winning tile** you're waiting on.
-  - At **14 tiles**: checks if the hand is a valid win, names the matched patterns, and totals the **tai (台)**.
+  - At **14 tiles**: checks if the hand is a valid win and shows a full **tai (台) breakdown** with payout math.
+- **Discard advisor** — at 14 tiles without a win, the app ranks your best discards: how close each one leaves you to ready (shanten) and how many useful tiles remain live (ukeire), with the accepted tiles rendered.
+- **Table context** — set your **seat wind and prevailing wind** so wind pungs score correctly.
+- **Flowers, seasons & animals** — toggle the Singapore bonus tiles you've drawn; own-flower, animal, and complete-set tai are included in the score.
+- **Win-context bonuses** — self-draw (自摸), last tile (海底撈月), kong replacement (槓上開花), robbing the kong (搶槓).
 - **Closest-pattern suggestions** — while your hand is still forming, the app ranks Singapore winning patterns by how many tiles away you are, so you can decide what to aim for.
 - **Learn section** — every supported pattern with its tai value, difficulty rating, description, and a rendered example hand.
 
@@ -56,7 +60,8 @@ css/style.css       # styling, tile rendering
 js/tiles.js         # tile ids, notation, parsing helpers
 js/engine.js        # win detection: 4 sets + pair, Thirteen Wonders, waits
 js/patterns.js      # named Singapore patterns + tai values + detectors
-js/suggestions.js   # shanten search + per-pattern closeness ranking
+js/suggestions.js   # shanten search, closeness ranking, discard advisor
+js/scoring.js       # full tai calculation: winds, bonus tiles, win context
 js/app.js           # UI wiring (palette, hand tray, analysis panel)
 test/run-tests.js   # engine test suite
 docs/               # design & rules documentation
@@ -66,15 +71,15 @@ See [`docs/DESIGN.md`](docs/DESIGN.md) for how the engine works and [`docs/RULES
 
 ## Current limitations
 
-- **Flowers and animals** (bonus tiles unique to Singapore play) are not modelled — they sit outside the 14-tile hand and only affect scoring, not the winning shape.
 - Kong (four-of-a-kind) is treated as out of scope; enter the tiles as a pung plus a spare.
-- Tai counting covers hand patterns only — no bonus tai for self-draw, last tile, kong replacement, etc.
+- Instant-win bonus hands (e.g. winning immediately from complete flower sets before play) are not modelled — bonus tiles contribute tai to a normal win only.
+- The discard advisor optimises for the standard 4-sets-plus-pair shape; it doesn't strategise for Thirteen Wonders.
 
 ## Roadmap / possible future features
 
 - **Rule-style switcher** — let the user choose which country's rules to play under (Singapore, Hong Kong, Taiwanese, Riichi/Japanese, MCR/Chinese official). Each style changes the valid special hands (e.g. Seven Pairs), the scoring system, and the pattern list. The engine is already structured so `patterns.js` can be swapped per rule set.
-- Flower/animal bonus tile support and full tai calculation.
-- Discard suggestions ("which tile should I throw to get closer?").
+- Kong support (four-of-a-kind sets and their bonus tai).
+- Practice/quiz mode — deal a random hand and quiz the player on waits and best discards.
 - Shareable hand links (encode the hand in the URL).
 - PWA/offline support for use at the table.
 

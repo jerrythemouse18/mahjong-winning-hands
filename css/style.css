@@ -185,6 +185,61 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .learn-example .tile-main { font-size: 1rem; }
 .learn-example .tile-sub { font-size: 0.7rem; }
 
+/* ---------- table controls ---------- */
+.table-controls { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+.table-controls label { font-size: 0.9rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.table-controls select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid #3b4a63;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+.subhead { margin: 14px 0 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+
+.bonus-tile { border-color: #c9a76a; }
+.bonus-tile .tile-main { font-size: 1.15rem; color: #92400e; }
+.bonus-tile .tile-sub { font-size: 0.6rem; color: var(--muted); text-transform: capitalize; }
+.bonus-tile.bonus-animal .tile-main { color: #6d28d9; }
+.bonus-tile.selected {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.context-row { display: flex; flex-direction: column; gap: 6px; }
+.context-option { font-size: 0.88rem; color: var(--text); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.context-option input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+/* ---------- score breakdown ---------- */
+.score-box { margin-top: 12px; }
+.score-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.score-table td { padding: 6px 10px; border-bottom: 1px solid #31415c; }
+.score-table .tai-cell { text-align: right; font-weight: 700; color: #7dd3fc; white-space: nowrap; }
+.score-table tfoot td { border-bottom: none; border-top: 2px solid var(--accent); font-weight: 700; }
+.score-table tfoot .tai-cell { color: var(--accent); }
+.cap-row td { color: var(--warn); font-style: italic; }
+.payout { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; }
+
+/* ---------- discard advisor ---------- */
+.discard-box { margin-top: 12px; }
+.discard-box h3 { margin: 0 0 10px; font-size: 0.95rem; }
+.discard-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.discard-info { font-size: 0.88rem; }
+.discard-info .ukeire { color: var(--accent); }
+.accepts-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tile.mini { width: 30px; height: 42px; cursor: default; }
+.tile.mini .tile-main { font-size: 0.85rem; }
+.tile.mini .tile-sub { font-size: 0.6rem; }
+
 footer {
   text-align: center;
   color: var(--muted);

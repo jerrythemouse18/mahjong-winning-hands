@@ -20,6 +20,32 @@
       <div id="palette"></div>
     </section>
 
+    <section id="table-section">
+      <h2>Your table</h2>
+      <div class="table-controls">
+        <label>Seat wind
+          <select id="seat-wind">
+            <option value="0">East 東</option>
+            <option value="1">South 南</option>
+            <option value="2">West 西</option>
+            <option value="3">North 北</option>
+          </select>
+        </label>
+        <label>Prevailing wind
+          <select id="round-wind">
+            <option value="0">East 東</option>
+            <option value="1">South 南</option>
+            <option value="2">West 西</option>
+            <option value="3">North 北</option>
+          </select>
+        </label>
+      </div>
+      <h3 class="subhead">Bonus tiles you've drawn (flowers · seasons · animals)</h3>
+      <div id="bonus-palette" class="palette-row"></div>
+      <h3 class="subhead">Win context (only counts when your hand wins)</h3>
+      <div id="win-context" class="context-row"></div>
+    </section>
+
     <section id="hand-section">
       <div class="hand-bar">
         <h2>2 · Your hand</h2>
@@ -33,6 +59,8 @@
       <h2>3 · Analysis</h2>
       <div id="status" class="status idle"></div>
       <div id="waits" class="waits-row"></div>
+      <div id="score-breakdown"></div>
+      <div id="discard-advice"></div>
     </section>
 
     <section id="suggestions-section">
@@ -54,6 +82,7 @@
   <script src="js/engine.js"></script>
   <script src="js/patterns.js"></script>
   <script src="js/suggestions.js"></script>
+  <script src="js/scoring.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -139,6 +139,44 @@ function dragonDistance(counts, pungsNeeded) {
 }
 
 /**
+ * Discard advisor: for a 14-tile hand that is not a win, evaluate every
+ * possible discard. For each candidate, report the resulting shanten and
+ * ukeire — how many individual tiles (out of the remaining wall) would
+ * advance the hand. Lower shanten first, then higher ukeire.
+ *
+ * Returns [{ tile, shanten, ukeire, acceptedTiles }], best first.
+ */
+function adviseDiscards(counts) {
+  const options = [];
+  for (let d = 0; d < TILE_COUNT; d++) {
+    if (counts[d] === 0) continue;
+    counts[d]--;
+    const shanten = standardShanten(counts);
+    // Ukeire: tiles that lower the shanten (or complete the hand at 0).
+    let ukeire = 0;
+    const acceptedTiles = [];
+    for (let t = 0; t < TILE_COUNT; t++) {
+      if (counts[t] >= 4) continue;
+      counts[t]++;
+      const after = shanten === 0 ? (analyzeWin(counts).win ? -1 : 99) : standardShanten(counts);
+      counts[t]--;
+      if (after < shanten) {
+        // 4 copies per tile type minus what we can see in our own hand/discard.
+        const live = 4 - counts[t] - (t === d ? 1 : 0);
+        if (live > 0) {
+          ukeire += live;
+          acceptedTiles.push(t);
+        }
+      }
+    }
+    counts[d]++;
+    options.push({ tile: d, shanten, ukeire, acceptedTiles });
+  }
+  options.sort((a, b) => a.shanten - b.shanten || b.ukeire - a.ukeire);
+  return options;
+}
+
+/**
  * Main entry: given the user's current counts, return ranked suggestions.
  * Each suggestion: { pattern, distance, note }.
  */

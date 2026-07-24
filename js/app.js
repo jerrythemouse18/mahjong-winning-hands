@@ -4,6 +4,10 @@
 
 const state = {
   counts: new Array(TILE_COUNT).fill(0),
+  seatWind: 0,
+  roundWind: 0,
+  bonusTiles: new Set(),
+  winContext: new Set(),
 };
 
 const els = {
@@ -12,9 +16,15 @@ const els = {
   handCount: document.getElementById('hand-count'),
   status: document.getElementById('status'),
   waits: document.getElementById('waits'),
+  scoreBreakdown: document.getElementById('score-breakdown'),
+  discardAdvice: document.getElementById('discard-advice'),
   suggestions: document.getElementById('suggestions'),
   clearBtn: document.getElementById('clear-btn'),
   learnList: document.getElementById('learn-list'),
+  seatWind: document.getElementById('seat-wind'),
+  roundWind: document.getElementById('round-wind'),
+  bonusPalette: document.getElementById('bonus-palette'),
+  winContext: document.getElementById('win-context'),
 };
 
 function totalTiles() {
@@ -105,7 +115,52 @@ function removeTile(id) {
 
 function clearHand() {
   state.counts.fill(0);
+  state.bonusTiles.clear();
+  state.winContext.clear();
+  els.bonusPalette.querySelectorAll('.tile').forEach(b => b.classList.remove('selected'));
+  els.winContext.querySelectorAll('input').forEach(cb => { cb.checked = false; });
   update();
+}
+
+/* ---------- table controls: winds, bonus tiles, win context ---------- */
+
+function buildTableControls() {
+  els.seatWind.addEventListener('change', () => { state.seatWind = Number(els.seatWind.value); update(); });
+  els.roundWind.addEventListener('change', () => { state.roundWind = Number(els.roundWind.value); update(); });
+
+  for (const b of BONUS_TILES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `tile bonus-tile bonus-${b.group}`;
+    btn.setAttribute('aria-label', b.name);
+    btn.setAttribute('aria-pressed', 'false');
+    btn.title = b.name;
+    btn.innerHTML = `<span class="tile-main">${b.symbol}</span><span class="tile-sub">${b.group}</span>`;
+    btn.addEventListener('click', () => {
+      if (state.bonusTiles.has(b.id)) state.bonusTiles.delete(b.id);
+      else state.bonusTiles.add(b.id);
+      const on = state.bonusTiles.has(b.id);
+      btn.classList.toggle('selected', on);
+      btn.setAttribute('aria-pressed', String(on));
+      update();
+    });
+    els.bonusPalette.appendChild(btn);
+  }
+
+  for (const wc of WIN_CONTEXT) {
+    const label = document.createElement('label');
+    label.className = 'context-option';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.addEventListener('change', () => {
+      if (cb.checked) state.winContext.add(wc.id);
+      else state.winContext.delete(wc.id);
+      update();
+    });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(` ${wc.name} (+${wc.tai} tai)`));
+    els.winContext.appendChild(label);
+  }
 }
 
 /* ---------- analysis panel ---------- */
@@ -116,6 +171,8 @@ function update() {
   const n = totalTiles();
 
   els.waits.innerHTML = '';
+  els.scoreBreakdown.innerHTML = '';
+  els.discardAdvice.innerHTML = '';
   els.status.className = 'status';
 
   if (n === 0) {
@@ -127,12 +184,12 @@ function update() {
   if (n === 14) {
     const analysis = analyzeWin(state.counts);
     if (analysis.win) {
-      const matched = matchPatterns(analysis, state.counts);
-      const names = matched.map(p => `${p.name} (${p.tai} tai)`).join(', ') || 'Chicken Hand (0 tai)';
-      const totalTai = matched.reduce((sum, p) => sum + p.tai, 0);
-      setStatus(`🎉 Winning hand — ${totalTai} tai! Patterns: ${names}`, 'win');
+      const score = scoreHand(analysis, state.counts, state);
+      setStatus(`🎉 Winning hand — ${score.total} tai${score.limited ? ` (limit; ${score.raw} before cap)` : ''}!`, 'win');
+      renderScoreBreakdown(score);
     } else {
       setStatus(`Not a winning hand — ${analysis.reason}`, 'no-win');
+      renderDiscardAdvice();
     }
   } else if (n === 13) {
     const waits = findWaits(state.counts);
@@ -154,6 +211,60 @@ function update() {
 function setStatus(msg, cls) {
   els.status.textContent = msg;
   els.status.className = `status ${cls}`;
+}
+
+function renderScoreBreakdown(score) {
+  const box = document.createElement('div');
+  box.className = 'score-box';
+  const rows = score.items.map(i =>
+    `<tr><td>${i.name}</td><td class="tai-cell">${i.tai > 0 ? '+' : ''}${i.tai}</td></tr>`).join('');
+  const capRow = score.limited
+    ? `<tr class="cap-row"><td>Limit applied (max ${score.limit} tai)</td><td class="tai-cell">${score.total}</td></tr>`
+    : '';
+  box.innerHTML = `
+    <table class="score-table">
+      <tbody>${rows}${capRow}</tbody>
+      <tfoot><tr><td>Total</td><td class="tai-cell">${score.total} tai</td></tr></tfoot>
+    </table>
+    <p class="payout">${describePayout(score.total, state.winContext.has('self-draw'))}</p>`;
+  els.scoreBreakdown.appendChild(box);
+}
+
+function renderDiscardAdvice() {
+  const options = adviseDiscards(state.counts).slice(0, 3);
+  if (!options.length) return;
+  const box = document.createElement('div');
+  box.className = 'discard-box';
+  const h = document.createElement('h3');
+  h.textContent = '💡 Best discards';
+  box.appendChild(h);
+  for (const opt of options) {
+    const row = document.createElement('div');
+    row.className = 'discard-row';
+    row.appendChild(tileButton(opt.tile, { onClick: removeTile }));
+    const info = document.createElement('div');
+    info.className = 'discard-info';
+    const stage = opt.shanten === 0 ? 'ready (tenpai)' : `${opt.shanten} step${opt.shanten > 1 ? 's' : ''} from ready`;
+    info.innerHTML = `<strong>Discard ${tileFace(opt.tile).label}</strong> → ${stage}, ` +
+      `<span class="ukeire">${opt.ukeire} useful tile${opt.ukeire === 1 ? '' : 's'} live</span>`;
+    if (opt.acceptedTiles.length) {
+      const accepts = document.createElement('div');
+      accepts.className = 'accepts-row';
+      for (const t of opt.acceptedTiles) {
+        const mini = tileButton(t, {});
+        mini.classList.add('mini');
+        accepts.appendChild(mini);
+      }
+      info.appendChild(accepts);
+    }
+    row.appendChild(info);
+    box.appendChild(row);
+  }
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent = 'Tap a suggested tile to discard it from your hand. "Useful tiles" counts every remaining copy that moves you closer.';
+  box.appendChild(hint);
+  els.discardAdvice.appendChild(box);
 }
 
 function renderSuggestions() {
@@ -203,6 +314,7 @@ function buildLearn() {
 /* ---------- init ---------- */
 
 buildPalette();
+buildTableControls();
 buildLearn();
 els.clearBtn.addEventListener('click', clearHand);
 update();

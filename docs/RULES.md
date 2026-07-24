@@ -13,7 +13,13 @@ Singapore mahjong uses the standard 34 tile types, four copies each (136 tiles),
 - **Winds**: East 東, South 南, West 西, North 北
 - **Dragons**: Red 中, Green 發, White 白
 
-**Bonus tiles** — flowers (花), seasons, and Singapore's distinctive **animal tiles** (cat, mouse, rooster, centipede) — are set aside when drawn and give bonus tai. They never form part of the 14-tile hand, which is why this prototype omits them.
+**Bonus tiles** — flowers (花), seasons, and Singapore's distinctive **animal tiles** (cat 貓, mouse 老鼠, rooster 公雞, centipede 蜈蚣) — are set aside when drawn and replaced with a new tile. They never form part of the 14-tile hand, but they add tai to your win:
+
+- **Own flower/season** (the one matching your seat: East=1, South=2, West=3, North=4) — 1 tai each.
+- **Each animal** — 1 tai.
+- **Complete set** of all four flowers, all four seasons, or all four animals — bonus tai (this app uses +2 per complete set).
+
+Mark the bonus tiles you've drawn in the app's "Your table" section and they'll be included in the score.
 
 ## The winning shape
 
@@ -53,9 +59,11 @@ Singapore mahjong scores in **tai**. Your hand's patterns determine base tai, an
 | 4 | Ping Hu 平和 (all chows) · Full Flush 清一色 |
 | 5 (limit) | Big Three Dragons 大三元 · All Honors 字一色 · Thirteen Wonders 十三幺 |
 
-\* Wind pungs depend on your seat and the prevailing round, which the app doesn't track yet — it recognises dragon pungs only.
+\* A pung of **your seat wind** or **the prevailing (round) wind** is worth 1 tai each — set both winds in the app's "Your table" section and they're scored automatically. A pung of another wind scores nothing.
 
-Additional tai from flowers/animals, self-draw, winning on the last tile, robbing the kong, etc. exist at real tables but are outside this prototype's scope.
+**Situational bonuses** (1 tai each, toggled in the app): self-draw 自摸, winning on the wall's last tile 海底撈月, winning on a kong replacement tile 槓上開花, robbing the kong 搶槓.
+
+**Payout**: the winner is paid by all three opponents. Payment doubles with each tai (2^tai units). On a discard win, the discarder pays the full amount and the other two pay half; on self-draw everyone pays full. Stake per unit is agreed before the game.
 
 **House rules vary.** Treat the numbers above as sensible defaults for learning, and defer to your table.
 
