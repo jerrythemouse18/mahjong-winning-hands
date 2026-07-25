@@ -61,6 +61,7 @@ node test/run-tests.js
 ```
 index.html          # single-page app shell
 css/style.css       # styling, tile rendering
+js/version.js       # APP_VERSION shown in the corner badge — bump each release
 js/tiles.js         # tile ids, notation, parsing helpers
 js/engine.js        # win detection: 4 sets + pair, Thirteen Wonders, waits
 js/patterns.js      # named Singapore patterns + tai values + detectors
@@ -72,6 +73,10 @@ docs/               # design & rules documentation
 ```
 
 See [`docs/DESIGN.md`](docs/DESIGN.md) for how the engine works and [`docs/RULES.md`](docs/RULES.md) for the mahjong rules background.
+
+## Versioning
+
+The badge in the app's top-right corner shows the deployed version (`APP_VERSION` in `js/version.js`). Bump it in every release commit — after pushing, reload the live site and wait for the badge to change to confirm GitHub Pages has picked up the deploy.
 
 ## Current limitations
 

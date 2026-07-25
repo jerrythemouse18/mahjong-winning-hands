@@ -421,6 +421,7 @@ function buildLearn() {
 
 /* ---------- init ---------- */
 
+document.getElementById('version-badge').textContent = APP_VERSION;
 buildPalette();
 buildTableControls();
 buildLearn();
