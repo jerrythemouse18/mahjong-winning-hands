@@ -120,6 +120,26 @@ function mkCtx(over = {}) {
   check('payout text mentions self-draw', ctx.describePayout(s.total, true, 0.20).includes('Self-draw'), true);
 }
 
+console.log('custom tai limit:');
+{
+  const c = counts('111m 555p 999s EEE 33s'); // raw 5 tai with self-draw (2+1+1+1)
+  const s = ctx.scoreHand(ctx.analyzeWin(c), c,
+    mkCtx({ winContext: new Set(['self-draw']), taiLimit: 3 }));
+  check('lower limit caps the total', s.total, 3);
+  check('capped result reports raw value', s.raw, 5);
+  check('score carries the configured limit', s.limit, 3);
+  const s10 = ctx.scoreHand(ctx.analyzeWin(c), c,
+    mkCtx({ winContext: new Set(['self-draw']), taiLimit: 10 }));
+  check('higher limit uncaps the total', s10.total, 5);
+}
+{
+  const c = counts('123m CCC FFF PPP 55s'); // big three dragons (limit hand)
+  const s8 = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx({ taiLimit: 8 }));
+  check('limit hand scores the full custom limit', s8.total, 8);
+  const s5 = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx());
+  check('limit hand still 5 at default limit', s5.total, 5);
+}
+
 console.log('money payouts:');
 {
   const p1 = ctx.payoutAmounts(1, 0.20);
@@ -138,6 +158,25 @@ console.log('money payouts:');
   check('discard payout text splits shooter/non-shooter',
     ctx.describePayout(2, false, 0.20).includes('shooter pays $0.80') &&
     ctx.describePayout(2, false, 0.20).includes('$0.40 each'), true);
+}
+
+console.log('shooter mode:');
+{
+  // User's example: 1 tai at $1 base → shooter pays the whole $4 pot.
+  const p = ctx.payoutAmounts(1, 1.00, 'shooter');
+  check('1 tai at $1: shooter pays $4 total', p.shooter, 4);
+  check('1 tai at $1: non-shooters pay nothing', p.nonShooter, 0);
+  check('winner collects the same pot in both modes',
+    p.total, ctx.payoutAmounts(1, 1.00, 'half').total);
+  const h = ctx.payoutAmounts(1, 1.00, 'half');
+  check('half mode: shooter $2, non-shooter $1', [h.shooter, h.nonShooter], [2, 1]);
+  check('self-draw identical in both modes',
+    ctx.payoutAmounts(3, 0.20, 'shooter').selfDrawEach,
+    ctx.payoutAmounts(3, 0.20, 'half').selfDrawEach);
+  check('shooter-mode payout text says pays for everyone',
+    ctx.describePayout(1, false, 1.00, 'shooter').includes('pays for everyone — $4.00 total'), true);
+  check('self-draw text unaffected by shooter mode',
+    ctx.describePayout(1, true, 1.00, 'shooter').includes('$2.00 each'), true);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -75,7 +75,7 @@ Options sort by shanten ascending, then ukeire descending. The UI shows the top 
 
 The raw sum is capped at the 5-tai limit; the breakdown shows both.
 
-**Money payouts**: the user picks a base cost (presets 10¢–$2 or custom input) — what a non-shooter pays at 1 tai. `payoutAmounts(tai, base)` returns `{ nonShooter: base × 2^(tai−1), shooter: 2× that }`. The UI renders a per-tai reference table (0–5 tai, shooter vs non-shooter columns) including bite rows (open kong/animal = 1 tai, hidden kong = 2 tai, paid by every player instantly), and the win breakdown shows dollar amounts at the chosen stake.
+**Money payouts**: the user picks a base cost (presets 10¢–$2 or custom input) — the per-player unit at 1 tai — plus a payment mode. `payoutAmounts(tai, base, mode)` computes the unit `base × 2^(tai−1)` and a pot of 4 units, then splits it: `'half'` mode → shooter pays 2 units, non-shooters 1 each; `'shooter'` mode (全銃) → shooter pays all 4 units, non-shooters nothing. Self-draw is mode-independent (all three pay 2 units). The UI renders a per-tai reference table (0 to the configured limit, shooter/non-shooter/winner-collects columns) including bite rows (open kong/animal = 1 tai, hidden kong = 2 tai, paid by every player instantly), and the win breakdown shows dollar amounts at the chosen stake and mode.
 
 Table context lives in the UI state: seat wind, prevailing wind, a set of toggled bonus tiles, and win-context checkboxes — all passed to `scoreHand` on every update.
 

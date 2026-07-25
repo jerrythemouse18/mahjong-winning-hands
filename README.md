@@ -17,6 +17,8 @@ A lightweight web app that helps players understand the winning combinations of 
 - **Flowers, seasons & animals** — toggle the Singapore bonus tiles you've drawn; own-flower, animal, and complete-set tai are included in the score.
 - **Win-context bonuses** — self-draw (自摸), last tile (海底撈月), kong replacement (槓上開花), robbing the kong (搶槓).
 - **Stakes & money payouts** — pick a common base cost (10¢, 20¢, 25¢, 50¢, $1, $2 at 1 tai) or type a custom amount. A reference table shows what the **shooter** (discarder, pays double) and **non-shooters** pay at every tai level, plus **bite** payouts (open kong/animal = 1 tai, hidden kong = 2 tai, collected instantly from every player). Winning hands show the dollar amounts alongside the tai breakdown.
+- **Custom tai limit** — the cap defaults to the common 5 tai but is adjustable per table. The payout table extends to your limit, totals cap against it, and limit hands (Big Three Dragons, All Honors, Thirteen Wonders) always score the full configured limit.
+- **Payment mode selector** — "Everyone pays (half-shooter)": the discarder pays double and the other two pay the base rate. "Shooter pays all (全銃)": the discarder covers the entire pot alone (e.g. 1 tai at $1 base → shooter pays the whole $4). The winner collects the same either way; self-draw is unaffected.
 - **Closest-pattern suggestions** — while your hand is still forming, the app ranks Singapore winning patterns by how many tiles away you are, so you can decide what to aim for.
 - **Learn section** — every supported pattern with its tai value, difficulty rating, description, and a rendered example hand.
 

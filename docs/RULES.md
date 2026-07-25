@@ -67,12 +67,16 @@ Singapore mahjong scores in **tai**. Your hand's patterns determine base tai, an
 
 The winner is paid by all three opponents. Tables agree on a **base cost** before the game — what each non-shooter pays for a 1-tai win. Common Singapore stakes: **10¢, 20¢, 25¢, 50¢, $1, $2**.
 
-- Payment **doubles with each tai**: non-shooter pays `base × 2^(tai−1)`.
-- The **shooter** — whoever discarded the winning tile — pays **double** the non-shooter rate.
-- On **self-draw**, all three players pay the shooter rate.
+- Payment **doubles with each tai**: the per-player unit is `base × 2^(tai−1)`.
 - A 0-tai chicken hand works out to half the base (where the table pays it at all).
+- On **self-draw**, all three players pay the doubled rate — in either mode below.
 
-Example at 20¢ base: a 3-tai win collects $0.80 from each non-shooter and $1.60 from the shooter.
+Tables settle discard wins one of two ways (selectable in the app):
+
+- **Everyone pays (half-shooter)** — the **shooter** (whoever discarded the winning tile) pays **double**, the other two pay the base rate. At 20¢ base, a 3-tai win collects $0.80 from each non-shooter and $1.60 from the shooter.
+- **Shooter pays all (全銃)** — the shooter covers the **entire pot alone**; the other two pay nothing. At $1 base, a 1-tai win costs the shooter the full $4.
+
+The winner collects the same total either way — the mode only changes who pays it.
 
 ### Bites (instant payouts)
 

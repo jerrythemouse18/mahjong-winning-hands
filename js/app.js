@@ -9,6 +9,8 @@ const state = {
   bonusTiles: new Set(),
   winContext: new Set(),
   stake: 0.20,
+  taiLimit: DEFAULT_TAI_LIMIT,
+  payMode: 'half',
 };
 
 const els = {
@@ -28,6 +30,8 @@ const els = {
   winContext: document.getElementById('win-context'),
   stakePresets: document.getElementById('stake-presets'),
   stakeCustom: document.getElementById('stake-custom'),
+  taiLimit: document.getElementById('tai-limit'),
+  payMode: document.getElementById('pay-mode'),
   payoutTable: document.getElementById('payout-table'),
 };
 
@@ -164,6 +168,30 @@ function buildTableControls() {
     const v = parseFloat(els.stakeCustom.value);
     if (v > 0) setStake(v, true);
   });
+  for (const m of PAY_MODES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stake-btn pay-mode-btn';
+    btn.dataset.mode = m.id;
+    btn.textContent = m.name;
+    btn.addEventListener('click', () => {
+      state.payMode = m.id;
+      els.payMode.querySelectorAll('.pay-mode-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === m.id));
+      renderPayoutTable();
+      update();
+    });
+    if (m.id === state.payMode) btn.classList.add('active');
+    els.payMode.appendChild(btn);
+  }
+  els.taiLimit.addEventListener('input', () => {
+    const v = parseInt(els.taiLimit.value, 10);
+    if (v >= 1) {
+      state.taiLimit = v;
+      renderPayoutTable();
+      update();
+    }
+  });
   setStake(state.stake);
 
   for (const wc of WIN_CONTEXT) {
@@ -195,21 +223,26 @@ function setStake(base, fromCustom = false) {
 /** Reference table: cost per tai at the current stake, shooter vs non-shooter. */
 function renderPayoutTable() {
   const base = state.stake;
+  const mode = state.payMode;
   const rows = [];
-  for (let tai = 0; tai <= 5; tai++) {
-    const { nonShooter, shooter } = payoutAmounts(tai, base);
-    const label = tai === 0 ? '0 (chicken)*' : tai === 5 ? '5 (limit)' : String(tai);
-    rows.push(`<tr><td>${label}</td><td>${fmtMoney(nonShooter)}</td><td>${fmtMoney(shooter)}</td></tr>`);
+  for (let tai = 0; tai <= state.taiLimit; tai++) {
+    const p = payoutAmounts(tai, base, mode);
+    const label = tai === 0 ? '0 (chicken)*' : tai === state.taiLimit ? `${tai} (limit)` : String(tai);
+    rows.push(`<tr><td>${label}</td><td>${fmtMoney(p.nonShooter)}</td><td>${fmtMoney(p.shooter)}</td><td>${fmtMoney(p.total)}</td></tr>`);
   }
+  const biteUnit = t => fmtMoney(payoutAmounts(t, base).nonShooter);
   const biteRows =
-    `<tr><td>Bite — open (kong/animal, ${BITE.open} tai)</td><td colspan="2">${fmtMoney(payoutAmounts(BITE.open, base).nonShooter)} from every player</td></tr>` +
-    `<tr><td>Bite — hidden kong (${BITE.hidden} tai)</td><td colspan="2">${fmtMoney(payoutAmounts(BITE.hidden, base).nonShooter)} from every player</td></tr>`;
+    `<tr><td>Bite — open (kong/animal, ${BITE.open} tai)</td><td colspan="3">${biteUnit(BITE.open)} from every player</td></tr>` +
+    `<tr><td>Bite — hidden kong (${BITE.hidden} tai)</td><td colspan="3">${biteUnit(BITE.hidden)} from every player</td></tr>`;
+  const modeHint = mode === 'shooter'
+    ? 'Shooter mode (全銃): whoever discards the winning tile pays the whole pot alone; the other two pay nothing.'
+    : 'Everyone pays: the shooter (discarder) pays double, the other two pay the base rate.';
   els.payoutTable.innerHTML = `
     <table class="payout-ref">
-      <thead><tr><th>Tai</th><th>Non-shooter pays</th><th>Shooter pays</th></tr></thead>
+      <thead><tr><th>Tai</th><th>Non-shooter pays</th><th>Shooter pays</th><th>Winner collects</th></tr></thead>
       <tbody>${rows.join('')}${biteRows}</tbody>
     </table>
-    <p class="hint">Shooter = whoever discarded the winning tile (pays double). On self-draw, all three pay the shooter price. *Many tables don't pay chicken hands. Bites are collected immediately, win or not.</p>`;
+    <p class="hint">${modeHint} On self-draw, all three pay the doubled rate in either mode. *Many tables don't pay chicken hands. Bites are collected immediately, win or not.</p>`;
 }
 
 /* ---------- analysis panel ---------- */
@@ -270,17 +303,21 @@ function renderScoreBreakdown(score) {
   const capRow = score.limited
     ? `<tr class="cap-row"><td>Limit applied (max ${score.limit} tai)</td><td class="tai-cell">${score.total}</td></tr>`
     : '';
-  const { nonShooter, shooter } = payoutAmounts(score.total, state.stake);
+  const p = payoutAmounts(score.total, state.stake, state.payMode);
+  const moneyRows = state.payMode === 'shooter'
+    ? `<tr class="money-row"><td>Shooter pays you (pays for all)</td><td class="tai-cell">${fmtMoney(p.shooter)}</td></tr>`
+    : `<tr class="money-row"><td>Non-shooter pays you</td><td class="tai-cell">${fmtMoney(p.nonShooter)}</td></tr>
+       <tr class="money-row"><td>Shooter pays you</td><td class="tai-cell">${fmtMoney(p.shooter)}</td></tr>`;
   box.innerHTML = `
     <table class="score-table">
       <tbody>${rows}${capRow}</tbody>
       <tfoot>
         <tr><td>Total</td><td class="tai-cell">${score.total} tai</td></tr>
-        <tr class="money-row"><td>Non-shooter pays you</td><td class="tai-cell">${fmtMoney(nonShooter)}</td></tr>
-        <tr class="money-row"><td>Shooter pays you</td><td class="tai-cell">${fmtMoney(shooter)}</td></tr>
+        ${moneyRows}
+        <tr class="money-row"><td>You collect (by discard)</td><td class="tai-cell">${fmtMoney(p.total)}</td></tr>
       </tfoot>
     </table>
-    <p class="payout">${describePayout(score.total, state.winContext.has('self-draw'), state.stake)}</p>`;
+    <p class="payout">${describePayout(score.total, state.winContext.has('self-draw'), state.stake, state.payMode)}</p>`;
   els.scoreBreakdown.appendChild(box);
 }
 

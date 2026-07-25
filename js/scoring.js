@@ -46,11 +46,13 @@ function scoreHand(analysis, counts, ctx) {
   // 1. Hand patterns (chicken hand contributes its 0 so the breakdown shows it).
   //    Dragon pungs are scored per-pung below, and Little/Big Three Dragons
   //    already include their pungs' value — so skip the generic pattern here.
+  const limit = ctx.taiLimit || DEFAULT_TAI_LIMIT;
   const matched = matchPatterns(analysis, counts);
   const hasDragonSet = matched.some(p => p.id === 'little-dragons' || p.id === 'big-dragons');
   for (const p of matched) {
     if (p.id === 'dragon-pung') continue;
-    items.push({ name: p.name, tai: p.tai });
+    // Limit hands are worth the table's full limit, whatever it is set to.
+    items.push({ name: p.name, tai: p.isLimit ? limit : p.tai });
   }
   if (!hasDragonSet) {
     const DRAGON_NAMES = ['Red 中', 'Green 發', 'White 白'];
@@ -79,8 +81,7 @@ function scoreHand(analysis, counts, ctx) {
   }
 
   const raw = items.reduce((s, i) => s + i.tai, 0);
-  const LIMIT = 5;
-  return { items, total: Math.min(raw, LIMIT), raw, limited: raw > LIMIT, limit: LIMIT };
+  return { items, total: Math.min(raw, limit), raw, limited: raw > limit, limit };
 }
 
 /** Tai from flowers/seasons/animals alone (also shown pre-win). */
@@ -110,6 +111,9 @@ function scoreBonusTiles(bonusSet, seatWind) {
 /** Common Singapore stake presets: dollars paid per non-shooter at 1 tai. */
 const STAKE_PRESETS = [0.10, 0.20, 0.25, 0.50, 1.00, 2.00];
 
+/** Maximum tai a hand can score. 5 is the common Singapore default; tables vary. */
+const DEFAULT_TAI_LIMIT = 5;
+
 /**
  * Bite — instant payouts collected from every player the moment they happen,
  * independent of winning the hand: open kong or animal = 1 tai, hidden
@@ -118,28 +122,45 @@ const STAKE_PRESETS = [0.10, 0.20, 0.25, 0.50, 1.00, 2.00];
 const BITE = { open: 1, hidden: 2 };
 
 /**
- * Payment doubles with each tai: a non-shooter pays base × 2^(tai−1).
- * The shooter (whoever discarded the winning tile) pays double that.
- * 0 tai (chicken hand) works out to half the base — where the table pays it.
+ * Payment modes:
+ *  - 'half'    (half-shooter, common default): everyone pays — the shooter
+ *              (whoever discarded the winning tile) pays double, the other
+ *              two pay the base rate.
+ *  - 'shooter' (full shooter, 全銃): the discarder pays for everyone — the
+ *              whole pot alone; the other two pay nothing.
+ * Self-draw is the same in both modes: all three pay the doubled rate.
  */
-function payoutAmounts(tai, base) {
-  const nonShooter = base * Math.pow(2, tai - 1);
-  return { nonShooter, shooter: nonShooter * 2 };
+const PAY_MODES = [
+  { id: 'half', name: 'Everyone pays (half-shooter)' },
+  { id: 'shooter', name: 'Shooter pays all (全銃)' },
+];
+
+/**
+ * Payment doubles with each tai: the per-player unit is base × 2^(tai−1).
+ * 0 tai (chicken hand) works out to half the base — where the table pays it.
+ * Returns what each seat pays on a discard win under the given mode.
+ */
+function payoutAmounts(tai, base, mode = 'half') {
+  const unit = base * Math.pow(2, tai - 1);
+  const pot = unit * 4; // shooter double + two non-shooters
+  if (mode === 'shooter') {
+    return { nonShooter: 0, shooter: pot, selfDrawEach: unit * 2, total: pot };
+  }
+  return { nonShooter: unit, shooter: unit * 2, selfDrawEach: unit * 2, total: pot };
 }
 
 function fmtMoney(x) {
   return '$' + (Math.round(x * 100) / 100).toFixed(2);
 }
 
-/**
- * Payout description under the common Singapore shooter scheme:
- * win by discard → the shooter pays double, the other two pay the base rate;
- * self-draw → all three pay the shooter price.
- */
-function describePayout(total, selfDraw, base) {
-  const { nonShooter, shooter } = payoutAmounts(total, base);
+/** Payout description for the current mode and stake. */
+function describePayout(total, selfDraw, base, mode = 'half') {
+  const p = payoutAmounts(total, base, mode);
   if (selfDraw) {
-    return `Self-draw: all three players pay ${fmtMoney(shooter)} each — ${fmtMoney(shooter * 3)} total.`;
+    return `Self-draw: all three players pay ${fmtMoney(p.selfDrawEach)} each — ${fmtMoney(p.selfDrawEach * 3)} total.`;
   }
-  return `By discard: the shooter pays ${fmtMoney(shooter)}, the other two pay ${fmtMoney(nonShooter)} each — ${fmtMoney(shooter + 2 * nonShooter)} total.`;
+  if (mode === 'shooter') {
+    return `By discard: the shooter pays for everyone — ${fmtMoney(p.shooter)} total; the other two pay nothing.`;
+  }
+  return `By discard: the shooter pays ${fmtMoney(p.shooter)}, the other two pay ${fmtMoney(p.nonShooter)} each — ${fmtMoney(p.total)} total.`;
 }
