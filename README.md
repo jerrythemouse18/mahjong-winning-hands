@@ -16,6 +16,7 @@ A lightweight web app that helps players understand the winning combinations of 
 - **Table context** — set your **seat wind and prevailing wind** so wind pungs score correctly.
 - **Flowers, seasons & animals** — toggle the Singapore bonus tiles you've drawn; own-flower, animal, and complete-set tai are included in the score.
 - **Win-context bonuses** — self-draw (自摸), last tile (海底撈月), kong replacement (槓上開花), robbing the kong (搶槓).
+- **Stakes & money payouts** — pick a common base cost (10¢, 20¢, 25¢, 50¢, $1, $2 at 1 tai) or type a custom amount. A reference table shows what the **shooter** (discarder, pays double) and **non-shooters** pay at every tai level, plus **bite** payouts (open kong/animal = 1 tai, hidden kong = 2 tai, collected instantly from every player). Winning hands show the dollar amounts alongside the tai breakdown.
 - **Closest-pattern suggestions** — while your hand is still forming, the app ranks Singapore winning patterns by how many tiles away you are, so you can decide what to aim for.
 - **Learn section** — every supported pattern with its tai value, difficulty rating, description, and a rendered example hand.
 

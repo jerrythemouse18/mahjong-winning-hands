@@ -117,7 +117,27 @@ function mkCtx(over = {}) {
   const c = counts('111m 555p 999s EEE 33s'); // pong pong + seat/round East pungs
   const s = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx({ winContext: new Set(['self-draw']) }));
   check('raw beyond limit is capped', s.total, 5); // 2+1+1+1 = 5, exactly limit
-  check('payout text mentions self-draw', ctx.describePayout(s.total, true).includes('Self-draw'), true);
+  check('payout text mentions self-draw', ctx.describePayout(s.total, true, 0.20).includes('Self-draw'), true);
+}
+
+console.log('money payouts:');
+{
+  const p1 = ctx.payoutAmounts(1, 0.20);
+  check('1 tai at 20¢: non-shooter pays base', p1.nonShooter, 0.20);
+  check('1 tai at 20¢: shooter pays double', p1.shooter, 0.40);
+  const p3 = ctx.payoutAmounts(3, 0.20);
+  check('3 tai doubles per tai (0.20 → 0.80)', p3.nonShooter, 0.80);
+  const p0 = ctx.payoutAmounts(0, 0.20);
+  check('0 tai (chicken) is half the base', p0.nonShooter, 0.10);
+  const p5 = ctx.payoutAmounts(5, 0.50);
+  check('5 tai at 50¢: non-shooter $8', p5.nonShooter, 8);
+  check('5 tai at 50¢: shooter $16', p5.shooter, 16);
+  check('bite: open = 1 tai', vm.runInContext('BITE.open', ctx), 1);
+  check('bite: hidden = 2 tai', vm.runInContext('BITE.hidden', ctx), 2);
+  check('money formatting', ctx.fmtMoney(0.8), '$0.80');
+  check('discard payout text splits shooter/non-shooter',
+    ctx.describePayout(2, false, 0.20).includes('shooter pays $0.80') &&
+    ctx.describePayout(2, false, 0.20).includes('$0.40 each'), true);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

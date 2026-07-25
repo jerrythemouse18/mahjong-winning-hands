@@ -8,6 +8,7 @@ const state = {
   roundWind: 0,
   bonusTiles: new Set(),
   winContext: new Set(),
+  stake: 0.20,
 };
 
 const els = {
@@ -25,6 +26,9 @@ const els = {
   roundWind: document.getElementById('round-wind'),
   bonusPalette: document.getElementById('bonus-palette'),
   winContext: document.getElementById('win-context'),
+  stakePresets: document.getElementById('stake-presets'),
+  stakeCustom: document.getElementById('stake-custom'),
+  payoutTable: document.getElementById('payout-table'),
 };
 
 function totalTiles() {
@@ -147,6 +151,21 @@ function buildTableControls() {
     els.bonusPalette.appendChild(btn);
   }
 
+  for (const base of STAKE_PRESETS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stake-btn';
+    btn.dataset.stake = base;
+    btn.textContent = base < 1 ? `${Math.round(base * 100)}¢` : `$${base}`;
+    btn.addEventListener('click', () => setStake(base));
+    els.stakePresets.appendChild(btn);
+  }
+  els.stakeCustom.addEventListener('input', () => {
+    const v = parseFloat(els.stakeCustom.value);
+    if (v > 0) setStake(v, true);
+  });
+  setStake(state.stake);
+
   for (const wc of WIN_CONTEXT) {
     const label = document.createElement('label');
     label.className = 'context-option';
@@ -161,6 +180,36 @@ function buildTableControls() {
     label.appendChild(document.createTextNode(` ${wc.name} (+${wc.tai} tai)`));
     els.winContext.appendChild(label);
   }
+}
+
+function setStake(base, fromCustom = false) {
+  state.stake = base;
+  els.stakePresets.querySelectorAll('.stake-btn').forEach(btn => {
+    btn.classList.toggle('active', !fromCustom && Number(btn.dataset.stake) === base);
+  });
+  if (!fromCustom) els.stakeCustom.value = '';
+  renderPayoutTable();
+  update();
+}
+
+/** Reference table: cost per tai at the current stake, shooter vs non-shooter. */
+function renderPayoutTable() {
+  const base = state.stake;
+  const rows = [];
+  for (let tai = 0; tai <= 5; tai++) {
+    const { nonShooter, shooter } = payoutAmounts(tai, base);
+    const label = tai === 0 ? '0 (chicken)*' : tai === 5 ? '5 (limit)' : String(tai);
+    rows.push(`<tr><td>${label}</td><td>${fmtMoney(nonShooter)}</td><td>${fmtMoney(shooter)}</td></tr>`);
+  }
+  const biteRows =
+    `<tr><td>Bite — open (kong/animal, ${BITE.open} tai)</td><td colspan="2">${fmtMoney(payoutAmounts(BITE.open, base).nonShooter)} from every player</td></tr>` +
+    `<tr><td>Bite — hidden kong (${BITE.hidden} tai)</td><td colspan="2">${fmtMoney(payoutAmounts(BITE.hidden, base).nonShooter)} from every player</td></tr>`;
+  els.payoutTable.innerHTML = `
+    <table class="payout-ref">
+      <thead><tr><th>Tai</th><th>Non-shooter pays</th><th>Shooter pays</th></tr></thead>
+      <tbody>${rows.join('')}${biteRows}</tbody>
+    </table>
+    <p class="hint">Shooter = whoever discarded the winning tile (pays double). On self-draw, all three pay the shooter price. *Many tables don't pay chicken hands. Bites are collected immediately, win or not.</p>`;
 }
 
 /* ---------- analysis panel ---------- */
@@ -221,12 +270,17 @@ function renderScoreBreakdown(score) {
   const capRow = score.limited
     ? `<tr class="cap-row"><td>Limit applied (max ${score.limit} tai)</td><td class="tai-cell">${score.total}</td></tr>`
     : '';
+  const { nonShooter, shooter } = payoutAmounts(score.total, state.stake);
   box.innerHTML = `
     <table class="score-table">
       <tbody>${rows}${capRow}</tbody>
-      <tfoot><tr><td>Total</td><td class="tai-cell">${score.total} tai</td></tr></tfoot>
+      <tfoot>
+        <tr><td>Total</td><td class="tai-cell">${score.total} tai</td></tr>
+        <tr class="money-row"><td>Non-shooter pays you</td><td class="tai-cell">${fmtMoney(nonShooter)}</td></tr>
+        <tr class="money-row"><td>Shooter pays you</td><td class="tai-cell">${fmtMoney(shooter)}</td></tr>
+      </tfoot>
     </table>
-    <p class="payout">${describePayout(score.total, state.winContext.has('self-draw'))}</p>`;
+    <p class="payout">${describePayout(score.total, state.winContext.has('self-draw'), state.stake)}</p>`;
   els.scoreBreakdown.appendChild(box);
 }
 

@@ -40,6 +40,14 @@
           </select>
         </label>
       </div>
+      <h3 class="subhead">Stakes — base cost at 1 tai (paid by each non-shooter)</h3>
+      <div class="stakes-controls">
+        <div id="stake-presets" class="stake-presets"></div>
+        <label class="custom-stake">Custom: $
+          <input id="stake-custom" type="number" min="0.01" step="0.01" placeholder="0.30">
+        </label>
+      </div>
+      <div id="payout-table"></div>
       <h3 class="subhead">Bonus tiles you've drawn (flowers · seasons · animals)</h3>
       <div id="bonus-palette" class="palette-row"></div>
       <h3 class="subhead">Win context (only counts when your hand wins)</h3>

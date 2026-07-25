@@ -73,7 +73,9 @@ Options sort by shanten ascending, then ukeire descending. The UI shows the top 
 3. **Bonus tiles** — own flower/season (matching seat position), animals (1 tai each), and complete-set bonuses.
 4. **Win context** — self-draw, last tile, kong replacement, robbing the kong (1 tai each).
 
-The raw sum is capped at the 5-tai limit; the breakdown shows both. `describePayout` renders the common Singapore half/full payment scheme (payout doubles per tai: `2^tai` units).
+The raw sum is capped at the 5-tai limit; the breakdown shows both.
+
+**Money payouts**: the user picks a base cost (presets 10¢–$2 or custom input) — what a non-shooter pays at 1 tai. `payoutAmounts(tai, base)` returns `{ nonShooter: base × 2^(tai−1), shooter: 2× that }`. The UI renders a per-tai reference table (0–5 tai, shooter vs non-shooter columns) including bite rows (open kong/animal = 1 tai, hidden kong = 2 tai, paid by every player instantly), and the win breakdown shows dollar amounts at the chosen stake.
 
 Table context lives in the UI state: seat wind, prevailing wind, a set of toggled bonus tiles, and win-context checkboxes — all passed to `scoreHand` on every update.
 

@@ -63,7 +63,25 @@ Singapore mahjong scores in **tai**. Your hand's patterns determine base tai, an
 
 **Situational bonuses** (1 tai each, toggled in the app): self-draw 自摸, winning on the wall's last tile 海底撈月, winning on a kong replacement tile 槓上開花, robbing the kong 搶槓.
 
-**Payout**: the winner is paid by all three opponents. Payment doubles with each tai (2^tai units). On a discard win, the discarder pays the full amount and the other two pay half; on self-draw everyone pays full. Stake per unit is agreed before the game.
+## Money payouts — shooter vs non-shooter
+
+The winner is paid by all three opponents. Tables agree on a **base cost** before the game — what each non-shooter pays for a 1-tai win. Common Singapore stakes: **10¢, 20¢, 25¢, 50¢, $1, $2**.
+
+- Payment **doubles with each tai**: non-shooter pays `base × 2^(tai−1)`.
+- The **shooter** — whoever discarded the winning tile — pays **double** the non-shooter rate.
+- On **self-draw**, all three players pay the shooter rate.
+- A 0-tai chicken hand works out to half the base (where the table pays it at all).
+
+Example at 20¢ base: a 3-tai win collects $0.80 from each non-shooter and $1.60 from the shooter.
+
+### Bites (instant payouts)
+
+Some events pay immediately from every player, win or not:
+
+- **Open** kong or animal tile — **1 tai** (the base cost from each player).
+- **Hidden (concealed) kong** — **2 tai** (double).
+
+Set your table's base cost in the app's Stakes section to see the full payout reference and dollar amounts on every winning hand.
 
 **House rules vary.** Treat the numbers above as sensible defaults for learning, and defer to your table.
 

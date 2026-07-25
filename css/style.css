@@ -207,6 +207,52 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
   outline-offset: 1px;
 }
 
+/* ---------- stakes & payout reference ---------- */
+.stakes-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.stake-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.stake-btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid #3b4a63;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.stake-btn:hover { background: #31415c; }
+.stake-btn.active {
+  background: #064e3b;
+  border-color: var(--accent);
+  color: #a7f3d0;
+}
+.custom-stake { font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+.custom-stake input {
+  width: 80px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid #3b4a63;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.88rem;
+}
+
+.payout-ref { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+.payout-ref th {
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 2px solid #3b4a63;
+}
+.payout-ref td { padding: 5px 10px; border-bottom: 1px solid #31415c; }
+.payout-ref td:nth-child(2), .payout-ref td:nth-child(3),
+.payout-ref th:nth-child(2), .payout-ref th:nth-child(3) { text-align: right; }
+.payout-ref td[colspan] { text-align: right; color: var(--warn); }
+
+.money-row td { color: var(--accent); }
+.money-row .tai-cell { color: var(--accent); }
+
 .context-row { display: flex; flex-direction: column; gap: 6px; }
 .context-option { font-size: 0.88rem; color: var(--text); display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .context-option input { accent-color: var(--accent); width: 16px; height: 16px; }

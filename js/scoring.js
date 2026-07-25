@@ -105,16 +105,41 @@ function scoreBonusTiles(bonusSet, seatWind) {
   return items;
 }
 
+/* ---------- money payouts ---------- */
+
+/** Common Singapore stake presets: dollars paid per non-shooter at 1 tai. */
+const STAKE_PRESETS = [0.10, 0.20, 0.25, 0.50, 1.00, 2.00];
+
 /**
- * Payout description under the common Singapore half/full scheme:
- * win by discard → discarder pays full, others half; self-draw → all pay full.
- * Payout unit doubles per tai: full = 2^tai base units.
+ * Bite — instant payouts collected from every player the moment they happen,
+ * independent of winning the hand: open kong or animal = 1 tai, hidden
+ * (concealed) kong = 2 tai.
  */
-function describePayout(total, selfDraw) {
-  const full = Math.pow(2, total);
-  const half = full / 2;
+const BITE = { open: 1, hidden: 2 };
+
+/**
+ * Payment doubles with each tai: a non-shooter pays base × 2^(tai−1).
+ * The shooter (whoever discarded the winning tile) pays double that.
+ * 0 tai (chicken hand) works out to half the base — where the table pays it.
+ */
+function payoutAmounts(tai, base) {
+  const nonShooter = base * Math.pow(2, tai - 1);
+  return { nonShooter, shooter: nonShooter * 2 };
+}
+
+function fmtMoney(x) {
+  return '$' + (Math.round(x * 100) / 100).toFixed(2);
+}
+
+/**
+ * Payout description under the common Singapore shooter scheme:
+ * win by discard → the shooter pays double, the other two pay the base rate;
+ * self-draw → all three pay the shooter price.
+ */
+function describePayout(total, selfDraw, base) {
+  const { nonShooter, shooter } = payoutAmounts(total, base);
   if (selfDraw) {
-    return `Self-draw: all three players pay full — ${full} unit${full === 1 ? '' : 's'} each (2^${total}).`;
+    return `Self-draw: all three players pay ${fmtMoney(shooter)} each — ${fmtMoney(shooter * 3)} total.`;
   }
-  return `By discard: discarder pays ${full} unit${full === 1 ? '' : 's'} (full), the other two pay ${half} each (half). Base unit is whatever your table stakes.`;
+  return `By discard: the shooter pays ${fmtMoney(shooter)}, the other two pay ${fmtMoney(nonShooter)} each — ${fmtMoney(shooter + 2 * nonShooter)} total.`;
 }
