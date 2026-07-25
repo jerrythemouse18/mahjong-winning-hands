@@ -179,6 +179,71 @@ console.log('shooter mode:');
     ctx.describePayout(1, true, 1.00, 'shooter').includes('$2.00 each'), true);
 }
 
+console.log('new SG patterns:');
+function patternIds(notation) {
+  const c = counts(notation);
+  return ctx.matchPatterns(ctx.analyzeWin(c), c).map(p => p.id);
+}
+{
+  check('little four winds', patternIds('EEE SSS WWW NN 123m').includes('little-winds'), true);
+  check('big four winds', patternIds('EEE SSS WWW NNN 55m').includes('big-winds'), true);
+  check('big winds is not little winds', patternIds('EEE SSS WWW NNN 55m').includes('little-winds'), false);
+  check('mixed terminals', patternIds('111m 999p 111s EEE 99s').includes('mixed-terminals'), true);
+  check('pure terminals', patternIds('111m 999m 111p 999s 99p').includes('pure-terminals'), true);
+  check('pure terminals is not mixed', patternIds('111m 999m 111p 999s 99p').includes('mixed-terminals'), false);
+  check('all honors is not mixed terminals', patternIds('EEE SSS WWW CCC FF').includes('mixed-terminals'), false);
+  check('nine gates (win on 5m)', patternIds('111m 2345m 5m 678m 999m').includes('nine-gates'), true);
+  check('nine gates pure win on 9m', patternIds('111m 2345678m 9999m').includes('nine-gates'), true);
+  check('full flush alone is not nine gates', patternIds('123m 345m 567m 789m 99m').includes('nine-gates'), false);
+  check('two-suit hand is not nine gates', patternIds('111m 2345678m 999m 11p').includes('nine-gates'), false);
+}
+{
+  // Big Four Winds must not stack seat/prevailing wind pung tai on top.
+  const c = counts('EEE SSS WWW NNN 55m');
+  const s = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx()); // seat+round East
+  check('four winds: no wind-pung double count',
+    s.items.some(i => i.name.includes('Seat wind')), false);
+  check('big four winds scores the limit', s.total, 5);
+  const s8 = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx({ taiLimit: 8 }));
+  check('big four winds scales with custom limit', s8.total, 8);
+  // Normal hand with a wind pung still gets seat tai.
+  const c2 = counts('123m 456p 999s EEE 55m');
+  const s2 = ctx.scoreHand(ctx.analyzeWin(c2), c2, mkCtx());
+  check('normal wind pung still scores seat tai',
+    s2.items.some(i => i.name.includes('Seat wind')), true);
+}
+{
+  // Limit-valued win-context bonuses.
+  const c = counts('123m 456p 999s 234s 55m');
+  const s = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx({ winContext: new Set(['heavenly']) }));
+  check('heavenly hand = limit', s.total, 5);
+  const s8 = ctx.scoreHand(ctx.analyzeWin(c), c,
+    mkCtx({ winContext: new Set(['earthly']), taiLimit: 8 }));
+  check('earthly hand scales with custom limit', s8.total, 8);
+  const sc = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx({ winContext: new Set(['concealed']) }));
+  check('concealed hand = 1 tai', sc.total, 1);
+  const sf = ctx.scoreHand(ctx.analyzeWin(c), c, mkCtx({ winContext: new Set(['flower-replacement']) }));
+  check('flower replacement = 1 tai', sf.total, 1);
+}
+
+console.log('pattern-targeted discards:');
+{
+  // Hand leaning half-flush in man + East pungs, with one stray dot tile.
+  const c = counts('123m 555m 789m EEE 5p 9s');
+  const throwsHF = ctx.bestDiscardsForPattern(c, 'half-flush').map(ctx.tileNotation);
+  check('half flush: throw the off-suit tiles', throwsHF.sort(), ['5p', '9s']);
+  check('hand unchanged after targeting', c.reduce((a, b) => a + b, 0), 14);
+  // Chasing pong pong from a mostly-pairs hand: the lone chow tiles go first.
+  const c2 = counts('11m 55p 99s EE CC 123m 4s');
+  const throwsPP = ctx.bestDiscardsForPattern(c2, 'pong-pong');
+  check('pong pong: throws suggested', throwsPP.length > 0, true);
+  check('pong pong: keeps the pairs', throwsPP.every(t => c2[t] === 1), true);
+  // Thirteen wonders: throw a middle tile, never a terminal/honor you hold once.
+  const c3 = counts('19m 19p 19s ESWN CF 5m 5m');
+  const throws13 = ctx.bestDiscardsForPattern(c3, 'thirteen-wonders').map(ctx.tileNotation);
+  check('thirteen wonders: throw the middle tile', throws13, ['5m']);
+}
+
 console.log('self-draw bonus:');
 {
   // User's table: $2 extra from each player on self-draw.

@@ -184,6 +184,29 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .example code { color: var(--warn); }
 .hint { color: var(--muted); font-size: 0.88rem; }
 
+.suggestion-card.targeted { outline: 2px solid var(--accent); }
+.target-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid #3b4a63;
+  border-radius: 999px;
+  padding: 3px 12px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.target-btn:hover { color: var(--text); border-color: var(--accent); }
+.target-btn.active { background: #064e3b; color: #a7f3d0; border-color: var(--accent); }
+
+.throw-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.throw-label { font-size: 0.82rem; color: var(--accent); font-weight: 600; }
+
 /* ---------- learn ---------- */
 .stars { color: var(--warn); letter-spacing: 2px; font-size: 0.85rem; }
 .tai-badge {

@@ -116,6 +116,94 @@ const PATTERNS = [
     detect: (a, counts) => counts[31] >= 3 && counts[32] >= 3 && counts[33] >= 3,
   },
   {
+    id: 'little-winds',
+    name: 'Little Four Winds (小四喜)',
+    tai: 5,
+    isLimit: true,
+    difficulty: 4,
+    example: 'EEE SSS WWW NN 123m',
+    description: 'Three pungs of winds plus a pair of the fourth wind. A limit hand — upgrade the pair to a pung for the even rarer Big Four Winds.',
+    detect: (a, counts) => {
+      const w = [counts[27], counts[28], counts[29], counts[30]];
+      return w.filter(x => x >= 3).length === 3 && w.some(x => x === 2);
+    },
+  },
+  {
+    id: 'big-winds',
+    name: 'Big Four Winds (大四喜)',
+    tai: 5,
+    isLimit: true,
+    difficulty: 5,
+    example: 'EEE SSS WWW NNN 55m',
+    description: 'Pungs of all four winds — East, South, West, and North. One of the rarest hands in mahjong; an automatic limit.',
+    detect: (a, counts) =>
+      counts[27] >= 3 && counts[28] >= 3 && counts[29] >= 3 && counts[30] >= 3,
+  },
+  {
+    id: 'mixed-terminals',
+    name: 'Mixed Terminals (混么九)',
+    tai: 4,
+    difficulty: 4,
+    example: '111m 999p 111s EEE 99s',
+    description: 'Every set is a pung of terminals (1s and 9s) or honors, and the pair is also a terminal or honor. No middle tiles anywhere.',
+    detect: (a, counts) => {
+      let hasHonor = false, hasTerminal = false;
+      for (let i = 0; i < TILE_COUNT; i++) {
+        if (!counts[i]) continue;
+        if (!isTerminalOrHonor(i)) return false;
+        if (isHonor(i)) hasHonor = true; else hasTerminal = true;
+      }
+      // Pure-terminal and all-honor hands have their own (bigger) patterns.
+      return hasHonor && hasTerminal && a.kind === 'standard';
+    },
+  },
+  {
+    id: 'pure-terminals',
+    name: 'Pure Terminals (清老頭)',
+    tai: 5,
+    isLimit: true,
+    difficulty: 5,
+    example: '111m 999m 111p 999s 99p',
+    description: 'Only 1s and 9s — four pungs and a pair built entirely from terminals, no honors. A limit hand.',
+    detect: (a, counts) => {
+      for (let i = 0; i < TILE_COUNT; i++) {
+        if (!counts[i]) continue;
+        if (isHonor(i) || !isTerminalOrHonor(i)) return false;
+      }
+      return a.kind === 'standard';
+    },
+  },
+  {
+    id: 'nine-gates',
+    name: 'Nine Gates (九蓮寶燈)',
+    tai: 5,
+    isLimit: true,
+    difficulty: 5,
+    example: '1112345678999m + any tile of the suit',
+    description: 'Hold 1112345678999 in one suit (concealed), then win with any tile of that suit — a nine-sided wait at its purest. A legendary limit hand.',
+    detect: (a, counts) => {
+      for (let suit = 0; suit < 3; suit++) {
+        const base = suit * 9;
+        let extra = 0, ok = true;
+        for (let r = 0; r < 9; r++) {
+          const need = (r === 0 || r === 8) ? 3 : 1;
+          const have = counts[base + r];
+          if (have < need || have > need + 1) { ok = false; break; }
+          extra += have - need;
+        }
+        if (ok && extra === 1) {
+          // All other tiles must be absent.
+          let others = 0;
+          for (let i = 0; i < TILE_COUNT; i++) {
+            if (i < base || i >= base + 9) others += counts[i];
+          }
+          if (others === 0) return true;
+        }
+      }
+      return false;
+    },
+  },
+  {
     id: 'thirteen-wonders',
     name: 'Thirteen Wonders (十三幺)',
     tai: 5,

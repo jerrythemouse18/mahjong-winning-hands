@@ -56,12 +56,14 @@ Singapore mahjong scores in **tai**. Your hand's patterns determine base tai, an
 | 1 | Pung of any dragon; seat/round wind pung* |
 | 2 | Pong Pong 碰碰胡 · Half Flush 混一色 |
 | 3 | Little Three Dragons 小三元 |
-| 4 | Ping Hu 平和 (all chows) · Full Flush 清一色 |
-| 5 (limit) | Big Three Dragons 大三元 · All Honors 字一色 · Thirteen Wonders 十三幺 |
+| 4 | Ping Hu 平和 (all chows) · Full Flush 清一色 · Mixed Terminals 混么九 |
+| limit | Big Three Dragons 大三元 · All Honors 字一色 · Thirteen Wonders 十三幺 · Little Four Winds 小四喜 · Big Four Winds 大四喜 · Pure Terminals 清老頭 · Nine Gates 九蓮寶燈 |
+
+Limit hands pay the table's full tai limit (default 5, configurable in the app). Two situational wins are also automatic limits: **Heavenly hand 天胡** (the dealer's opening 14 tiles are already a win) and **Earthly hand 地胡** (winning on the dealer's very first discard).
 
 \* A pung of **your seat wind** or **the prevailing (round) wind** is worth 1 tai each — set both winds in the app's "Your table" section and they're scored automatically. A pung of another wind scores nothing.
 
-**Situational bonuses** (1 tai each, toggled in the app): self-draw 自摸, winning on the wall's last tile 海底撈月, winning on a kong replacement tile 槓上開花, robbing the kong 搶槓.
+**Situational bonuses** (1 tai each, toggled in the app): self-draw 自摸, fully concealed hand 門前清 (no melds claimed from discards), winning on the wall's last tile 海底撈月, winning on a kong replacement tile 槓上開花, winning on a flower replacement tile 花上自摸, robbing the kong 搶槓.
 
 ## Money payouts — shooter vs non-shooter
 

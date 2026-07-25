@@ -64,6 +64,10 @@ For a 14-tile hand that isn't a win, try discarding each distinct tile in turn. 
 
 Options sort by shanten ascending, then ukeire descending. The UI shows the top 3 with the accepted tiles rendered, and tapping a suggested tile performs the discard. The advisor targets the standard shape only; it doesn't strategise for Thirteen Wonders.
 
+## Pattern-targeted discards (`bestDiscardsForPattern`)
+
+Complementing the shape-based advisor: for any named pattern, try each discard and keep those that minimise that pattern's `PATTERN_DISTANCE` heuristic. At 14 tiles, every suggestion card shows "To chase this, throw: …" with the tied-best tiles (tap to discard). The user can pin a pattern with the "Chase this hand" button (`state.targetPattern`) — the pinned card stays on top and throw suggestions are shown only for it.
+
 ## Tai scoring (`scoring.js`)
 
 `scoreHand(analysis, counts, ctx)` builds an itemised breakdown:

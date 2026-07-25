@@ -22,12 +22,19 @@ const BONUS_TILES = [
   { id: 11, group: 'animal', name: 'Centipede 蜈蚣', symbol: '蜈' },
 ];
 
-/** Win-context bonuses the player can toggle. 1 tai each. */
+/**
+ * Win-context bonuses the player can toggle. `tai: 'limit'` resolves to the
+ * table's tai limit (heavenly/earthly hands are automatic limit wins).
+ */
 const WIN_CONTEXT = [
   { id: 'self-draw', name: 'Self-draw (自摸)', tai: 1 },
+  { id: 'concealed', name: 'Fully concealed hand (門前清)', tai: 1 },
   { id: 'last-tile', name: 'Last tile of the wall (海底撈月)', tai: 1 },
   { id: 'kong-replacement', name: 'Win on kong replacement (槓上開花)', tai: 1 },
+  { id: 'flower-replacement', name: 'Win on flower replacement (花上自摸)', tai: 1 },
   { id: 'robbing-kong', name: 'Robbing the kong (搶槓)', tai: 1 },
+  { id: 'heavenly', name: 'Heavenly hand — dealer wins with opening tiles (天胡)', tai: 'limit' },
+  { id: 'earthly', name: 'Earthly hand — win on dealer\'s first discard (地胡)', tai: 'limit' },
 ];
 
 const WIND_NAMES = ['East 東', 'South 南', 'West 西', 'North 北'];
@@ -62,22 +69,28 @@ function scoreHand(analysis, counts, ctx) {
   }
 
   // 2. Seat / prevailing wind pungs (stack when the winds coincide).
-  const seatTile = 27 + ctx.seatWind;
-  const roundTile = 27 + ctx.roundWind;
-  if (counts[seatTile] >= 3) {
-    items.push({ name: `Seat wind pung (${WIND_NAMES[ctx.seatWind]})`, tai: 1 });
-  }
-  if (counts[roundTile] >= 3) {
-    items.push({ name: `Prevailing wind pung (${WIND_NAMES[ctx.roundWind]})`, tai: 1 });
+  //    Skipped when a Four Winds hand already scores the wind pungs.
+  const hasWindSet = matched.some(p => p.id === 'little-winds' || p.id === 'big-winds');
+  if (!hasWindSet) {
+    const seatTile = 27 + ctx.seatWind;
+    const roundTile = 27 + ctx.roundWind;
+    if (counts[seatTile] >= 3) {
+      items.push({ name: `Seat wind pung (${WIND_NAMES[ctx.seatWind]})`, tai: 1 });
+    }
+    if (counts[roundTile] >= 3) {
+      items.push({ name: `Prevailing wind pung (${WIND_NAMES[ctx.roundWind]})`, tai: 1 });
+    }
   }
 
   // 3. Bonus tiles.
   const bonus = scoreBonusTiles(ctx.bonusTiles, ctx.seatWind);
   items.push(...bonus);
 
-  // 4. Win-context bonuses.
+  // 4. Win-context bonuses ('limit' resolves to the table's tai limit).
   for (const wc of WIN_CONTEXT) {
-    if (ctx.winContext.has(wc.id)) items.push({ name: wc.name, tai: wc.tai });
+    if (ctx.winContext.has(wc.id)) {
+      items.push({ name: wc.name, tai: wc.tai === 'limit' ? limit : wc.tai });
+    }
   }
 
   const raw = items.reduce((s, i) => s + i.tai, 0);

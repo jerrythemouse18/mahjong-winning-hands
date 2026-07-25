@@ -112,6 +112,11 @@ const PATTERN_DISTANCE = {
   },
   'little-dragons': counts => dragonDistance(counts, 2),
   'big-dragons': counts => dragonDistance(counts, 3),
+  'little-winds': counts => windDistance(counts, 3),
+  'big-winds': counts => windDistance(counts, 4),
+  'mixed-terminals': counts => terminalPungDistance(counts, true),
+  'pure-terminals': counts => terminalPungDistance(counts, false),
+  'nine-gates': counts => nineGatesDistance(counts),
   'thirteen-wonders': counts => thirteenWondersShanten(counts),
 };
 
@@ -125,6 +130,40 @@ function flushDistance(counts, allowHonors) {
       else if (suitOf(i) === suit) keep += counts[i];
     }
     best = Math.min(best, Math.max(0, 13 - keep));
+  }
+  return best;
+}
+
+function windDistance(counts, pungsNeeded) {
+  const winds = [counts[27], counts[28], counts[29], counts[30]].sort((a, b) => b - a);
+  let need = 0;
+  for (let i = 0; i < pungsNeeded; i++) need += Math.max(0, 3 - winds[i]);
+  if (pungsNeeded === 3) need += Math.max(0, 2 - winds[3]); // pair of 4th wind
+  return need + Math.max(0, standardShanten(counts) - need);
+}
+
+/** Distance to an all-pung hand of terminals (+honors when allowed). */
+function terminalPungDistance(counts, allowHonors) {
+  let keep = 0;
+  for (let i = 0; i < TILE_COUNT; i++) {
+    if (!counts[i]) continue;
+    const eligible = allowHonors ? isTerminalOrHonor(i) : (isSuited(i) && isTerminalOrHonor(i));
+    if (eligible) keep += Math.min(counts[i], 3);
+  }
+  return Math.max(0, 14 - keep - 1);
+}
+
+/** Tiles missing from the best-suit 1112345678999 template. */
+function nineGatesDistance(counts) {
+  let best = 99;
+  for (let suit = 0; suit < 3; suit++) {
+    const base = suit * 9;
+    let missing = 0;
+    for (let r = 0; r < 9; r++) {
+      const need = (r === 0 || r === 8) ? 3 : 1;
+      missing += Math.max(0, need - counts[base + r]);
+    }
+    best = Math.min(best, missing);
   }
   return best;
 }
@@ -174,6 +213,26 @@ function adviseDiscards(counts) {
   }
   options.sort((a, b) => a.shanten - b.shanten || b.ukeire - a.ukeire);
   return options;
+}
+
+/**
+ * For a specific pattern, find which tile(s) to throw: the discards that
+ * leave the remaining hand closest to the pattern. Returns tile ids tied
+ * for the best resulting distance (up to maxTiles).
+ */
+function bestDiscardsForPattern(counts, patternId, maxTiles = 3) {
+  const fn = PATTERN_DISTANCE[patternId];
+  if (!fn) return [];
+  const options = [];
+  for (let d = 0; d < TILE_COUNT; d++) {
+    if (!counts[d]) continue;
+    counts[d]--;
+    options.push({ tile: d, distance: fn(counts.slice()) });
+    counts[d]++;
+  }
+  if (!options.length) return [];
+  const best = Math.min(...options.map(o => o.distance));
+  return options.filter(o => o.distance === best).map(o => o.tile).slice(0, maxTiles);
 }
 
 /**

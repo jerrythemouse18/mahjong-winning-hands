@@ -12,6 +12,7 @@ const state = {
   taiLimit: DEFAULT_TAI_LIMIT,
   payMode: 'half',
   selfDrawBonus: 0,
+  targetPattern: null, // pattern id the user chose to chase, or null for auto
 };
 
 const els = {
@@ -213,7 +214,8 @@ function buildTableControls() {
       update();
     });
     label.appendChild(cb);
-    label.appendChild(document.createTextNode(` ${wc.name} (+${wc.tai} tai)`));
+    const taiLabel = wc.tai === 'limit' ? 'limit' : `+${wc.tai} tai`;
+    label.appendChild(document.createTextNode(` ${wc.name} (${taiLabel})`));
     els.winContext.appendChild(label);
   }
 }
@@ -382,10 +384,20 @@ function renderSuggestions() {
     els.suggestions.innerHTML = '<p class="hint">Add at least 5 tiles to get pattern suggestions.</p>';
     return;
   }
-  const ranked = suggestPatterns(state.counts).slice(0, 5);
+  let ranked = suggestPatterns(state.counts);
+  // A chosen target is always shown, pinned to the top; otherwise top 5.
+  if (state.targetPattern) {
+    const target = ranked.find(r => r.pattern.id === state.targetPattern);
+    ranked = [target, ...ranked.filter(r => r !== target).slice(0, 4)];
+  } else {
+    ranked = ranked.slice(0, 5);
+  }
+  // "What to throw" only makes sense with a full 14-tile hand.
+  const showThrows = n === 14;
   for (const { pattern, distance } of ranked) {
+    const isTarget = pattern.id === state.targetPattern;
     const card = document.createElement('div');
-    card.className = 'suggestion-card';
+    card.className = 'suggestion-card' + (isTarget ? ' targeted' : '');
     const closeness = distance <= 0 ? 'Complete!' :
       distance === 1 ? 'Very close — about 1 tile away' :
       `About ${distance} tiles away`;
@@ -394,10 +406,39 @@ function renderSuggestions() {
         <strong>${pattern.name}</strong>
         <span class="tai-badge">${pattern.tai} tai</span>
         <span class="distance ${distance <= 1 ? 'near' : distance <= 3 ? 'mid' : 'far'}">${closeness}</span>
+        <button type="button" class="target-btn${isTarget ? ' active' : ''}">${isTarget ? '★ Chasing — tap to stop' : '☆ Chase this hand'}</button>
       </div>
       <p>${pattern.description}</p>
       <p class="example">Example: <code>${pattern.example}</code></p>`;
+    card.querySelector('.target-btn').addEventListener('click', () => {
+      state.targetPattern = isTarget ? null : pattern.id;
+      update();
+    });
+    if (showThrows && distance > 0 && (isTarget || !state.targetPattern)) {
+      const throwTiles = bestDiscardsForPattern(state.counts, pattern.id);
+      if (throwTiles.length) {
+        const row = document.createElement('div');
+        row.className = 'throw-row';
+        const lbl = document.createElement('span');
+        lbl.className = 'throw-label';
+        lbl.textContent = 'To chase this, throw:';
+        row.appendChild(lbl);
+        for (const t of throwTiles) {
+          const btn = tileButton(t, { onClick: removeTile });
+          btn.classList.add('mini');
+          btn.title = `Discard ${tileFace(t).label}`;
+          row.appendChild(btn);
+        }
+        card.appendChild(row);
+      }
+    }
     els.suggestions.appendChild(card);
+  }
+  if (!showThrows && n >= 5) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'Fill your hand to 14 tiles to see which tile to throw for each pattern.';
+    els.suggestions.appendChild(p);
   }
 }
 
