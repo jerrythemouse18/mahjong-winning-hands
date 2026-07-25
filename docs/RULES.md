@@ -69,7 +69,7 @@ The winner is paid by all three opponents. Tables agree on a **base cost** befor
 
 - Payment **doubles with each tai**: the per-player unit is `base × 2^(tai−1)`.
 - A 0-tai chicken hand works out to half the base (where the table pays it at all).
-- On **self-draw**, all three players pay the doubled rate — in either mode below.
+- On **self-draw**, all three players pay the doubled rate — in either mode below. Some tables also add a flat **self-draw bonus** from each player (e.g. an extra $2 each); set it in the app's Stakes section and it's included in the self-draw column and totals.
 
 Tables settle discard wins one of two ways (selectable in the app):
 

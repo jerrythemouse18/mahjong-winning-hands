@@ -138,15 +138,18 @@ const PAY_MODES = [
 /**
  * Payment doubles with each tai: the per-player unit is base × 2^(tai−1).
  * 0 tai (chicken hand) works out to half the base — where the table pays it.
- * Returns what each seat pays on a discard win under the given mode.
+ * Returns what each seat pays on a discard win under the given mode, plus
+ * what each of the three players pays on self-draw. `selfDrawBonus` is a
+ * house extra added on top of every player's self-draw payment.
  */
-function payoutAmounts(tai, base, mode = 'half') {
+function payoutAmounts(tai, base, mode = 'half', selfDrawBonus = 0) {
   const unit = base * Math.pow(2, tai - 1);
   const pot = unit * 4; // shooter double + two non-shooters
+  const selfDrawEach = unit * 2 + selfDrawBonus;
   if (mode === 'shooter') {
-    return { nonShooter: 0, shooter: pot, selfDrawEach: unit * 2, total: pot };
+    return { nonShooter: 0, shooter: pot, selfDrawEach, selfDrawTotal: selfDrawEach * 3, total: pot };
   }
-  return { nonShooter: unit, shooter: unit * 2, selfDrawEach: unit * 2, total: pot };
+  return { nonShooter: unit, shooter: unit * 2, selfDrawEach, selfDrawTotal: selfDrawEach * 3, total: pot };
 }
 
 function fmtMoney(x) {
@@ -154,10 +157,11 @@ function fmtMoney(x) {
 }
 
 /** Payout description for the current mode and stake. */
-function describePayout(total, selfDraw, base, mode = 'half') {
-  const p = payoutAmounts(total, base, mode);
+function describePayout(total, selfDraw, base, mode = 'half', selfDrawBonus = 0) {
+  const p = payoutAmounts(total, base, mode, selfDrawBonus);
   if (selfDraw) {
-    return `Self-draw: all three players pay ${fmtMoney(p.selfDrawEach)} each — ${fmtMoney(p.selfDrawEach * 3)} total.`;
+    const bonusNote = selfDrawBonus > 0 ? ` (includes ${fmtMoney(selfDrawBonus)} self-draw bonus each)` : '';
+    return `Self-draw: all three players pay ${fmtMoney(p.selfDrawEach)} each — ${fmtMoney(p.selfDrawTotal)} total${bonusNote}.`;
   }
   if (mode === 'shooter') {
     return `By discard: the shooter pays for everyone — ${fmtMoney(p.shooter)} total; the other two pay nothing.`;

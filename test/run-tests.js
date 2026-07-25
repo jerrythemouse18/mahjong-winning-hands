@@ -179,5 +179,22 @@ console.log('shooter mode:');
     ctx.describePayout(1, true, 1.00, 'shooter').includes('$2.00 each'), true);
 }
 
+console.log('self-draw bonus:');
+{
+  // User's table: $2 extra from each player on self-draw.
+  const p = ctx.payoutAmounts(1, 1.00, 'half', 2.00);
+  check('self-draw each = doubled rate + bonus', p.selfDrawEach, 4); // 2 + 2
+  check('self-draw total = 3 players', p.selfDrawTotal, 12);
+  check('discard amounts unaffected by bonus', [p.nonShooter, p.shooter, p.total], [1, 2, 4]);
+  const ps = ctx.payoutAmounts(1, 1.00, 'shooter', 2.00);
+  check('bonus applies in shooter mode too', ps.selfDrawEach, 4);
+  const p0 = ctx.payoutAmounts(1, 1.00, 'half');
+  check('no bonus by default', p0.selfDrawEach, 2);
+  check('payout text mentions the bonus',
+    ctx.describePayout(1, true, 1.00, 'half', 2.00).includes('$2.00 self-draw bonus each'), true);
+  check('payout text total includes bonus',
+    ctx.describePayout(1, true, 1.00, 'half', 2.00).includes('$12.00 total'), true);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
