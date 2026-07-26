@@ -124,6 +124,31 @@ function scoreBonusTiles(bonusSet, seatWind) {
 /** Common Singapore stake presets: dollars paid per non-shooter at 1 tai. */
 const STAKE_PRESETS = [0.10, 0.20, 0.25, 0.50, 1.00, 2.00];
 
+/**
+ * Table-based stake schedules (dollars at 1..5 tai). Some tables quote fixed
+ * per-tai amounts instead of the doubling formula — e.g. the common "3/6"
+ * ($0.30/$0.60) game. Tai beyond the last entry clamp to it; 0-tai (chicken)
+ * hands are not defined in these schedules and pay nothing.
+ *
+ * perPlayer: what each player pays in 'half' (everyone pays) mode, and what
+ *            every player pays on self-draw.
+ * shooterAll: what the discarder pays alone in 'shooter' (pays-all) mode.
+ */
+const STAKE_TABLES = [
+  {
+    id: 'three-six',
+    label: '3/6',
+    perPlayer: [2, 3, 5, 10, 20],
+    shooterAll: [4, 7, 11, 20, 40],
+  },
+];
+
+/** Look up a schedule value for a tai count (clamped to the table's range). */
+function tableAmount(arr, tai) {
+  if (tai <= 0) return 0;
+  return arr[Math.min(tai, arr.length) - 1];
+}
+
 /** Maximum tai a hand can score. 5 is the common Singapore default; tables vary. */
 const DEFAULT_TAI_LIMIT = 5;
 
@@ -154,8 +179,22 @@ const PAY_MODES = [
  * Returns what each seat pays on a discard win under the given mode, plus
  * what each of the three players pays on self-draw. `selfDrawBonus` is a
  * house extra added on top of every player's self-draw payment.
+ *
+ * When `stakeTable` (an entry from STAKE_TABLES) is given it replaces the
+ * doubling formula: in 'half' mode all three players pay the per-player
+ * schedule (no shooter doubling); in 'shooter' mode the discarder pays the
+ * shooter schedule alone. Self-draw always uses the per-player schedule.
  */
-function payoutAmounts(tai, base, mode = 'half', selfDrawBonus = 0) {
+function payoutAmounts(tai, base, mode = 'half', selfDrawBonus = 0, stakeTable = null) {
+  if (stakeTable) {
+    const each = tableAmount(stakeTable.perPlayer, tai);
+    const selfDrawEach = each + selfDrawBonus;
+    if (mode === 'shooter') {
+      const pot = tableAmount(stakeTable.shooterAll, tai);
+      return { nonShooter: 0, shooter: pot, selfDrawEach, selfDrawTotal: selfDrawEach * 3, total: pot };
+    }
+    return { nonShooter: each, shooter: each, selfDrawEach, selfDrawTotal: selfDrawEach * 3, total: each * 3 };
+  }
   const unit = base * Math.pow(2, tai - 1);
   const pot = unit * 4; // shooter double + two non-shooters
   const selfDrawEach = unit * 2 + selfDrawBonus;
@@ -170,14 +209,17 @@ function fmtMoney(x) {
 }
 
 /** Payout description for the current mode and stake. */
-function describePayout(total, selfDraw, base, mode = 'half', selfDrawBonus = 0) {
-  const p = payoutAmounts(total, base, mode, selfDrawBonus);
+function describePayout(total, selfDraw, base, mode = 'half', selfDrawBonus = 0, stakeTable = null) {
+  const p = payoutAmounts(total, base, mode, selfDrawBonus, stakeTable);
   if (selfDraw) {
     const bonusNote = selfDrawBonus > 0 ? ` (includes ${fmtMoney(selfDrawBonus)} self-draw bonus each)` : '';
     return `Self-draw: all three players pay ${fmtMoney(p.selfDrawEach)} each — ${fmtMoney(p.selfDrawTotal)} total${bonusNote}.`;
   }
   if (mode === 'shooter') {
     return `By discard: the shooter pays for everyone — ${fmtMoney(p.shooter)} total; the other two pay nothing.`;
+  }
+  if (stakeTable) {
+    return `By discard: all three players pay ${fmtMoney(p.nonShooter)} each — ${fmtMoney(p.total)} total.`;
   }
   return `By discard: the shooter pays ${fmtMoney(p.shooter)}, the other two pay ${fmtMoney(p.nonShooter)} each — ${fmtMoney(p.total)} total.`;
 }

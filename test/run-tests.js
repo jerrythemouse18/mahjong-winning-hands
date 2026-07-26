@@ -261,5 +261,35 @@ console.log('self-draw bonus:');
     ctx.describePayout(1, true, 1.00, 'half', 2.00).includes('$12.00 total'), true);
 }
 
+console.log('3/6 stake table:');
+{
+  const t36 = vm.runInContext('STAKE_TABLES[0]', ctx);
+  check('table id', t36.id, 'three-six');
+  // Shooter mode: discarder pays 4/7/11/20/40 alone.
+  const s1 = ctx.payoutAmounts(1, 0.20, 'shooter', 0, t36);
+  check('3/6 shooter 1 tai: $4 alone', [s1.shooter, s1.nonShooter, s1.total], [4, 0, 4]);
+  check('3/6 shooter 3 tai: $11', ctx.payoutAmounts(3, 0.20, 'shooter', 0, t36).shooter, 11);
+  check('3/6 shooter 5 tai: $40', ctx.payoutAmounts(5, 0.20, 'shooter', 0, t36).shooter, 40);
+  // Everyone-pays mode: all three pay 2/3/5/10/20, no shooter doubling.
+  const h2 = ctx.payoutAmounts(2, 0.20, 'half', 0, t36);
+  check('3/6 half 2 tai: $3 each, $9 total', [h2.nonShooter, h2.shooter, h2.total], [3, 3, 9]);
+  check('3/6 half 4 tai: $10 each', ctx.payoutAmounts(4, 0.20, 'half', 0, t36).nonShooter, 10);
+  // Self-draw: everyone pays the per-player schedule (both modes).
+  check('3/6 self-draw 1 tai: $2 each', ctx.payoutAmounts(1, 0.20, 'shooter', 0, t36).selfDrawEach, 2);
+  check('3/6 self-draw 5 tai: $20 each, $60 total',
+    ctx.payoutAmounts(5, 0.20, 'half', 0, t36).selfDrawTotal, 60);
+  check('3/6 self-draw bonus still adds', ctx.payoutAmounts(1, 0.20, 'half', 2, t36).selfDrawEach, 4);
+  // Edge behaviour.
+  check('3/6 chicken (0 tai) pays nothing', ctx.payoutAmounts(0, 0.20, 'half', 0, t36).total, 0);
+  check('3/6 clamps beyond 5 tai', ctx.payoutAmounts(8, 0.20, 'shooter', 0, t36).shooter, 40);
+  check('base stake ignored when table active',
+    ctx.payoutAmounts(1, 99, 'shooter', 0, t36).shooter, 4);
+  // Text.
+  check('3/6 half payout text: all three pay',
+    ctx.describePayout(2, false, 0.20, 'half', 0, t36).includes('all three players pay $3.00 each'), true);
+  // No table → formula unchanged.
+  check('formula path unchanged without table', ctx.payoutAmounts(1, 1.00, 'half').shooter, 2);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
