@@ -14,6 +14,8 @@ const state = {
   payMode: 'half',
   selfDrawBonus: 0,
   targetPattern: null, // pattern id the user chose to chase, or null for auto
+  oppDiscards: [[], [], []], // recent discards per opponent, oldest first
+  inputTarget: -1, // -1 = taps add to my hand; 0..2 = record that opponent's discard
 };
 
 const els = {
@@ -37,6 +39,9 @@ const els = {
   selfDrawBonus: document.getElementById('selfdraw-bonus'),
   payMode: document.getElementById('pay-mode'),
   payoutTable: document.getElementById('payout-table'),
+  opponentTabs: document.getElementById('opponent-tabs'),
+  opponentDiscards: document.getElementById('opponent-discards'),
+  safetyResults: document.getElementById('safety-results'),
 };
 
 function totalTiles() {
@@ -113,6 +118,16 @@ function renderHand() {
 /* ---------- interactions ---------- */
 
 function addTile(id) {
+  // When an opponent tab is selected, palette taps record their discard.
+  if (state.inputTarget >= 0) {
+    const seen = state.oppDiscards.flat().filter(t => t === id).length + state.counts[id];
+    if (seen >= 4) return;                 // only 4 copies exist anywhere
+    const list = state.oppDiscards[state.inputTarget];
+    list.push(id);
+    if (list.length > MAX_DISCARD_ROUNDS) list.shift(); // oldest round drops off
+    update();
+    return;
+  }
   if (state.counts[id] >= 4) return;       // only 4 copies exist
   if (totalTiles() >= 14) return;          // hand is full
   state.counts[id]++;
@@ -129,6 +144,8 @@ function clearHand() {
   state.counts.fill(0);
   state.bonusTiles.clear();
   state.winContext.clear();
+  state.oppDiscards = [[], [], []];
+  state.targetPattern = null;
   els.bonusPalette.querySelectorAll('.tile').forEach(b => b.classList.remove('selected'));
   els.winContext.querySelectorAll('input').forEach(cb => { cb.checked = false; });
   update();
@@ -290,6 +307,8 @@ function renderPayoutTable() {
 function update() {
   refreshPaletteBadges();
   renderHand();
+  renderOpponentDiscards();
+  renderSafety();
   const n = totalTiles();
 
   els.waits.innerHTML = '';
@@ -471,6 +490,100 @@ function renderSuggestions() {
   }
 }
 
+/* ---------- opponents' discards & safety ---------- */
+
+function buildOpponentTabs() {
+  const mine = document.createElement('button');
+  mine.type = 'button';
+  mine.className = 'stake-btn opp-tab active';
+  mine.textContent = 'My hand';
+  mine.addEventListener('click', () => setInputTarget(-1));
+  els.opponentTabs.appendChild(mine);
+  OPPONENT_NAMES.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stake-btn opp-tab';
+    btn.textContent = name;
+    btn.addEventListener('click', () => setInputTarget(i));
+    els.opponentTabs.appendChild(btn);
+  });
+}
+
+function setInputTarget(i) {
+  state.inputTarget = i;
+  els.opponentTabs.querySelectorAll('.opp-tab').forEach((btn, idx) => {
+    btn.classList.toggle('active', idx - 1 === i);
+  });
+  update();
+}
+
+function renderOpponentDiscards() {
+  els.opponentDiscards.innerHTML = '';
+  OPPONENT_NAMES.forEach((name, i) => {
+    const row = document.createElement('div');
+    row.className = 'opp-row' + (state.inputTarget === i ? ' recording' : '');
+    const label = document.createElement('span');
+    label.className = 'opp-label';
+    label.textContent = name + (state.inputTarget === i ? ' — recording' : '');
+    row.appendChild(label);
+    const tiles = document.createElement('div');
+    tiles.className = 'opp-tiles';
+    state.oppDiscards[i].forEach((t, idx) => {
+      const btn = tileButton(t, {
+        onClick: () => { state.oppDiscards[i].splice(idx, 1); update(); },
+      });
+      btn.classList.add('mini');
+      btn.title = 'Tap to remove';
+      tiles.appendChild(btn);
+    });
+    if (!state.oppDiscards[i].length) {
+      const empty = document.createElement('span');
+      empty.className = 'hint';
+      empty.textContent = 'no discards recorded';
+      tiles.appendChild(empty);
+    }
+    row.appendChild(tiles);
+    els.opponentDiscards.appendChild(row);
+  });
+}
+
+function renderSafety() {
+  els.safetyResults.innerHTML = '';
+  const anyDiscards = state.oppDiscards.some(l => l.length > 0);
+  const n = totalTiles();
+  if (!anyDiscards || n === 0) {
+    if (n > 0) {
+      els.safetyResults.innerHTML = '<p class="hint">Record some opponent discards to see which of your tiles are safer to throw.</p>';
+    }
+    return;
+  }
+  const ranked = safetyRanking(state.counts, state.oppDiscards);
+  const box = document.createElement('div');
+  box.className = 'safety-box';
+  const h = document.createElement('h3');
+  h.textContent = '🛡️ Safer discards from your hand';
+  box.appendChild(h);
+  for (const r of ranked) {
+    const row = document.createElement('div');
+    row.className = `safety-row ${r.level}`;
+    const btn = tileButton(r.tile, { onClick: removeTile });
+    btn.classList.add('mini');
+    btn.title = `Discard ${tileFace(r.tile).label}`;
+    row.appendChild(btn);
+    const info = document.createElement('div');
+    info.className = 'safety-info';
+    const levelText = { safe: 'Safe', caution: 'Caution', risky: 'Risky' }[r.level];
+    info.innerHTML = `<span class="safety-level">${levelText}</span> ${r.reasons.join('; ')}`;
+    row.appendChild(info);
+    box.appendChild(row);
+  }
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent = 'Heuristic only — tiles an opponent already discarded are the safest; fresh honors are the most dangerous. Tap a tile to discard it.';
+  box.appendChild(hint);
+  els.safetyResults.appendChild(box);
+}
+
 /* ---------- learn section ---------- */
 
 function buildLearn() {
@@ -494,6 +607,7 @@ function buildLearn() {
 document.getElementById('version-badge').textContent = APP_VERSION;
 buildPalette();
 buildTableControls();
+buildOpponentTabs();
 buildLearn();
 els.clearBtn.addEventListener('click', clearHand);
 update();

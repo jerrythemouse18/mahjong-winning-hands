@@ -64,6 +64,10 @@ For a 14-tile hand that isn't a win, try discarding each distinct tile in turn. 
 
 Options sort by shanten ascending, then ukeire descending. The UI shows the top 3 with the accepted tiles rendered, and tapping a suggested tile performs the discard. The advisor targets the standard shape only; it doesn't strategise for Thirteen Wonders.
 
+## Discard safety (`safety.js`)
+
+The user records up to 5 recent discards per opponent (`state.oppDiscards`, oldest dropped first). Palette taps route to the selected opponent tab (`state.inputTarget`) or to the player's own hand. `tileSafety(tile, handCounts, oppDiscards)` scores each hand tile: +4 per opponent who discarded that exact tile, +1 per other visible copy, +4 for a dead honor (3+ visible), +1 (cap 3) per nearby same-suit discard, −2 for a completely fresh honor. Levels: ≥8 safe, ≥4 caution, else risky. `safetyRanking` sorts the hand safest-first; the UI renders one row per distinct tile with the reasons, tap-to-discard. Deliberately a teaching heuristic — no meld/timing reads.
+
 ## Pattern-targeted discards (`bestDiscardsForPattern`)
 
 Complementing the shape-based advisor: for any named pattern, try each discard and keep those that minimise that pattern's `PATTERN_DISTANCE` heuristic. At 14 tiles, every suggestion card shows "To chase this, throw: …" with the tied-best tiles (tap to discard). The user can pin a pattern with the "Chase this hand" button (`state.targetPattern`) — the pinned card stays on top and throw suggestions are shown only for it.

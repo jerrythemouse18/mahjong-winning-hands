@@ -328,6 +328,47 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .tile.mini .tile-main { font-size: 0.85rem; }
 .tile.mini .tile-sub { font-size: 0.6rem; }
 
+/* ---------- opponents' discards & safety ---------- */
+.opp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.opp-row.recording { outline: 2px solid var(--accent); }
+.opp-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  min-width: 150px;
+  padding-top: 10px;
+}
+.opp-row.recording .opp-label { color: #a7f3d0; font-weight: 600; }
+.opp-tiles { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 44px; }
+
+.safety-box { margin-top: 12px; }
+.safety-box h3 { margin: 0 0 10px; font-size: 0.95rem; }
+.safety-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: var(--panel-2);
+  border-left: 4px solid #374151;
+}
+.safety-row.safe { border-left-color: var(--accent); }
+.safety-row.caution { border-left-color: var(--warn); }
+.safety-row.risky { border-left-color: #ef4444; }
+.safety-info { font-size: 0.84rem; color: var(--muted); }
+.safety-level { font-weight: 700; margin-right: 6px; }
+.safety-row.safe .safety-level { color: var(--accent); }
+.safety-row.caution .safety-level { color: var(--warn); }
+.safety-row.risky .safety-level { color: #f87171; }
+
 footer {
   text-align: center;
   color: var(--muted);

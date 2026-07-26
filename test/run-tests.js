@@ -8,7 +8,7 @@ const vm = require('vm');
 
 const ctx = { console };
 vm.createContext(ctx);
-for (const f of ['tiles.js', 'engine.js', 'patterns.js', 'suggestions.js', 'scoring.js']) {
+for (const f of ['tiles.js', 'engine.js', 'patterns.js', 'suggestions.js', 'safety.js', 'scoring.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 
@@ -289,6 +289,36 @@ console.log('3/6 stake table:');
     ctx.describePayout(2, false, 0.20, 'half', 0, t36).includes('all three players pay $3.00 each'), true);
   // No table → formula unchanged.
   check('formula path unchanged without table', ctx.payoutAmounts(1, 1.00, 'half').shooter, 2);
+}
+
+console.log('discard safety:');
+{
+  const hand = counts('123m 456p 789s 5s E 9p');
+  const fiveS = ctx.parseHand('5s')[0], east = ctx.parseHand('E')[0];
+  // 5s discarded by two opponents → strongly safe.
+  const opp = [ctx.parseHand('5s 1m'), ctx.parseHand('5s 9m'), ctx.parseHand('2p')];
+  const s5 = ctx.tileSafety(fiveS, hand, opp);
+  check('tile discarded by 2 opponents is safe', s5.level, 'safe');
+  check('reason mentions opponents', s5.reasons[0].includes('2 opponents'), true);
+  // Fresh honor nobody has shown → risky.
+  const sE = ctx.tileSafety(east, hand, opp);
+  check('fresh honor is risky', sE.level, 'risky');
+  check('fresh honor reason', sE.reasons.some(r => r.includes('fresh honor')), true);
+  // Honor with 3 copies visible is dead → safe.
+  const opp2 = [ctx.parseHand('E'), ctx.parseHand('E'), ctx.parseHand('E')];
+  const sDead = ctx.tileSafety(east, hand, opp2);
+  check('dead honor is safe', sDead.level, 'safe');
+  // Nearby same-suit discards raise safety.
+  const opp3 = [ctx.parseHand('4s 6s'), ctx.parseHand('3s'), []];
+  const sNear = ctx.tileSafety(fiveS, hand, opp3);
+  check('nearby suit discards add safety', sNear.score >= 3, true);
+  // Ranking covers every distinct tile in hand, safest first.
+  const ranked = ctx.safetyRanking(hand, opp);
+  check('ranking covers distinct hand tiles', ranked.length,
+    hand.filter(c => c > 0).length);
+  check('ranking sorted safest first',
+    ranked.every((r, i) => i === 0 || ranked[i - 1].score >= r.score), true);
+  check('safest is the double-discarded 5s', ranked[0].tile, fiveS);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -17,7 +17,7 @@
   <main>
     <section id="palette-section">
       <h2>1 · Pick your tiles</h2>
-      <p class="hint">Tap a tile to add a copy (up to 4). The badge shows how many you hold.</p>
+      <p class="hint">Tap a tile to add a copy (up to 4). The badge shows how many you hold. (If an opponent is selected in section 5, taps record their discards instead.)</p>
       <div id="palette"></div>
     </section>
 
@@ -84,6 +84,14 @@
       <div id="suggestions"></div>
     </section>
 
+    <section id="safety-section">
+      <h2>5 · Opponents' discards & safe tiles</h2>
+      <p class="hint">Select an opponent, then tap tiles in the palette above to record their recent discards (last 5 rounds each, oldest drops off). Tap a recorded tile to remove it.</p>
+      <div id="opponent-tabs" class="stake-presets"></div>
+      <div id="opponent-discards"></div>
+      <div id="safety-results"></div>
+    </section>
+
     <section id="learn-section">
       <h2>📖 Learn the winning combinations</h2>
       <div id="learn-list"></div>
@@ -99,6 +107,7 @@
   <script src="js/engine.js"></script>
   <script src="js/patterns.js"></script>
   <script src="js/suggestions.js"></script>
+  <script src="js/safety.js"></script>
   <script src="js/scoring.js"></script>
   <script src="js/app.js"></script>
 </body>
