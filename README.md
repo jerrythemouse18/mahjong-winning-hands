@@ -90,6 +90,16 @@ docs/               # design & rules documentation
 
 See [`docs/DESIGN.md`](docs/DESIGN.md) for how the engine works and [`docs/RULES.md`](docs/RULES.md) for the mahjong rules background.
 
+## Game tracker tab (prototype)
+
+A second tab alongside the hand analyzer for following a live session:
+
+- **Round state** — prevailing wind, hand number, and current dealer (庄), advanced automatically: the dealer repeats on a dealer win or a draw, otherwise the deal passes right; when the deal returns to seat 1 the prevailing wind advances.
+- **Players** — four seats with editable names, live seat winds, and running totals (wins, tai won, self-draws, times shot).
+- **Record a hand with buttons only** — tap the winner (or Draw 流局), the tai count (0 up to your tai limit), self-draw 自摸 vs by-discard, and the shooter. Validation stops impossible entries (shooter = winner, discard without shooter).
+- **Bites & kongs** — record animals (1 tai), open kongs (1 tai), and hidden kongs (2 tai) as they happen mid-hand; they're logged into the history with a 💰 marker, counted per player (bites and bite tai), and don't advance the deal.
+- **History, undo, reset** — every hand and bite logged newest-first; Undo removes the last entry (restoring dealer/wind for hands, leaving them untouched for bites); game state persists in your browser (localStorage) across reloads.
+
 ## Versioning
 
 The badge in the app's top-right corner shows the deployed version (`APP_VERSION` in `js/version.js`). Bump it in every release commit — after pushing, reload the live site and wait for the badge to change to confirm GitHub Pages has picked up the deploy.

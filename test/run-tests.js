@@ -339,5 +339,107 @@ console.log('discard safety:');
   check('safest is the double-discarded 5s', ranked[0].tile, fiveS);
 }
 
+console.log('game tracker:');
+{
+  const tctx = { console, localStorage: { getItem: () => null, setItem: () => {} } };
+  vm.createContext(tctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'tracker.js'), 'utf8'), tctx, { filename: 'tracker.js' });
+  const T = (expr) => vm.runInContext(expr, tctx);
+
+  // Non-dealer win by discard: deal passes right.
+  T("tracker.draft = { winner: 2, tai: 3, how: 'discard', shooter: 0 }");
+  check('draft with shooter is ready', T('trackerDraftReady()'), true);
+  T('trackerRecordHand()');
+  check('deal passes after non-dealer win', T('tracker.dealerSeat'), 1);
+  check('hand number advances', T('tracker.handNumber'), 2);
+  check('history records shooter', T('tracker.history[0].shooter'), 0);
+
+  // Dealer win: dealer stays.
+  T("tracker.draft = { winner: 1, tai: 1, how: 'self-draw', shooter: null }");
+  T('trackerRecordHand()');
+  check('dealer repeats after dealer win', T('tracker.dealerSeat'), 1);
+
+  // Draw: dealer stays.
+  T("tracker.draft = { winner: null, tai: null, how: 'draw', shooter: null }");
+  check('draw draft is ready', T('trackerDraftReady()'), true);
+  T('trackerRecordHand()');
+  check('dealer repeats after draw', T('tracker.dealerSeat'), 1);
+  check('draw recorded with null winner', T('tracker.history[2].winner'), null);
+
+  // Wind advances when the deal returns to seat 0.
+  T("tracker.draft = { winner: 0, tai: 2, how: 'discard', shooter: 3 }");
+  T('trackerRecordHand()'); // dealer 1 -> 2
+  T("tracker.draft = { winner: 0, tai: 2, how: 'discard', shooter: 3 }");
+  T('trackerRecordHand()'); // dealer 2 -> 3
+  T("tracker.draft = { winner: 0, tai: 2, how: 'discard', shooter: 3 }");
+  T('trackerRecordHand()'); // dealer 3 -> 0, wind advances
+  check('wind advances when deal returns to seat 0', T('tracker.prevailingWind'), 1);
+  check('dealer back at seat 0', T('tracker.dealerSeat'), 0);
+
+  // Totals.
+  const totals = T('trackerTotals()');
+  check('winner totals accumulate', totals[0].wins, 3);
+  check('tai totals accumulate', totals[0].tai, 6);
+  check('shooter count accumulates', totals[3].shot, 3);
+  check('self-draw counted', totals[1].selfDraws, 1);
+
+  // Validation: shooter can't be the winner; discard needs a shooter.
+  T("tracker.draft = { winner: 2, tai: 1, how: 'discard', shooter: 2 }");
+  check('winner-as-shooter rejected', T('trackerDraftReady()'), false);
+  T("tracker.draft = { winner: 2, tai: 1, how: 'discard', shooter: null }");
+  check('discard without shooter rejected', T('trackerDraftReady()'), false);
+  T("tracker.draft = { winner: 2, tai: null, how: 'self-draw', shooter: null }");
+  check('missing tai rejected', T('trackerDraftReady()'), false);
+
+  // Undo restores dealer, wind, and hand number.
+  const before = T('JSON.stringify([tracker.dealerSeat, tracker.prevailingWind, tracker.handNumber])');
+  T("tracker.draft = { winner: 1, tai: 5, how: 'self-draw', shooter: null }");
+  T('trackerRecordHand()');
+  T('trackerUndo()');
+  check('undo restores state', T('JSON.stringify([tracker.dealerSeat, tracker.prevailingWind, tracker.handNumber])'), JSON.parse(JSON.stringify(before)));
+  check('undo removes history entry', T('tracker.history.length'), 6);
+
+  // Reset.
+  T('trackerReset()');
+  check('reset clears everything', T('tracker.history.length + tracker.dealerSeat + tracker.prevailingWind + (tracker.handNumber - 1)'), 0);
+
+  // --- bites / kongs ---
+  T("tracker.biteDraft = { player: 2, type: 'hidden-kong' }");
+  T('trackerRecordBite()');
+  check('bite recorded with tai', T('tracker.history[0].tai'), 2);
+  check('bite tagged to current hand', T('tracker.history[0].hand'), 1);
+  check('bite does not advance the deal', T('tracker.dealerSeat + (tracker.handNumber - 1)'), 0);
+  check('bite draft cleared', T('tracker.biteDraft.player'), null);
+  T("tracker.biteDraft = { player: 2, type: 'animal' }");
+  T('trackerRecordBite()');
+  T("tracker.draft = { winner: 0, tai: 2, how: 'self-draw', shooter: null }");
+  T('trackerRecordHand()');
+  const bt = T('trackerTotals()');
+  check('bite totals accumulate', [bt[2].bites, bt[2].biteTai], [2, 3]);
+  check('bites separate from win totals', bt[2].wins, 0);
+  // Undo after a hand: pops the hand (restores deal), bites stay.
+  T('trackerUndo()');
+  check('undo pops hand not bites', T('tracker.history.length'), 2);
+  check('undo restored hand number', T('tracker.handNumber'), 1);
+  // Undo again: pops the latest bite without touching dealer/wind.
+  T("tracker.dealerSeat = 3");
+  T('trackerUndo()');
+  check('bite undo leaves dealer alone', T('tracker.dealerSeat'), 3);
+  check('bite undo pops the bite', T('tracker.history.length'), 1);
+  // Incomplete bite drafts are ignored.
+  T("tracker.biteDraft = { player: null, type: 'animal' }");
+  T('trackerRecordBite()');
+  check('incomplete bite ignored', T('tracker.history.length'), 1);
+  // Legacy entries without kind are migrated on load.
+  const legacyCtx = { console, localStorage: {
+    getItem: () => JSON.stringify({ players: ['A','B','C','D'], prevailingWind: 0, dealerSeat: 0, handNumber: 2,
+      history: [{ hand: 1, wind: 0, dealerSeat: 0, winner: 1, tai: 3, how: 'self-draw', shooter: null }] }),
+    setItem: () => {} } };
+  vm.createContext(legacyCtx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'tracker.js'), 'utf8'), legacyCtx, { filename: 'tracker.js' });
+  vm.runInContext('trackerLoad()', legacyCtx);
+  check('legacy history migrated to kind:hand', vm.runInContext("tracker.history[0].kind", legacyCtx), 'hand');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
