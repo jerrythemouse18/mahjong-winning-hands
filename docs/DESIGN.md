@@ -66,7 +66,16 @@ Options sort by shanten ascending, then ukeire descending. The UI shows the top 
 
 ## Discard safety (`safety.js`)
 
-The user records up to 5 recent discards per opponent (`state.oppDiscards`, oldest dropped first). Palette taps route to the selected opponent tab (`state.inputTarget`) or to the player's own hand. `tileSafety(tile, handCounts, oppDiscards)` scores each hand tile: +4 per opponent who discarded that exact tile, +1 per other visible copy, +4 for a dead honor (3+ visible), +1 (cap 3) per nearby same-suit discard, −2 for a completely fresh honor. Levels: ≥8 safe, ≥4 caution, else risky. `safetyRanking` sorts the hand safest-first; the UI renders one row per distinct tile with the reasons, tap-to-discard. Deliberately a teaching heuristic — no meld/timing reads.
+The user records up to 5 recent discards per opponent (`state.oppDiscards`, oldest dropped first). Palette or inline-picker taps route to the selected opponent tab (`state.inputTarget`) or to the player's own hand. `tileSafety(tile, handCounts, oppDiscards, assumeChow, oppTai)` combines signals, each contributing to a score with a typed reason:
+
+- **Genbutsu**: +5 per opponent who discarded the exact tile (marks that opponent hard-safe). The furiten guarantee is a riichi rule — Singapore conventions vary — so it's treated as a strong signal, not an absolute.
+- **Suji**: two-sided-wait partners (`SUJI_PARTNERS`) of discarded tiles, +3 per source opponent, scaled ×0.5 in "mixed" mode (`assumeChow=false`); marks that opponent soft-safe.
+- **Kabe / one-chance**: sequence paths through the tile blocked by 4 visible copies (no-chance) or 3 (one-chance, 0.75 weight), +2 per blocked path.
+- **Dead tiles**: all 4 copies visible → hard-safe against everyone. Honors: 4 visible = dead (+4); exactly 3 = pung impossible but a tanki pair wait stays live (+2 only).
+- **Late-discard weighting**: suji sources in the last ~40% of an opponent's discard list add +1.
+- **Tai weighting** (`state.oppTai`, entered per opponent from their exposed melds): live tiles take −tai; hard-safe tiles earn +ceil(tai×0.75); suji-only coverage earns half of that, further scaled by the suji multiplier.
+
+Levels: ≥10 safe, ≥5 caution, else risky. `safetyRanking` sorts safest-first and the UI groups results under Safe/Caution/Risky headers with the per-signal reasons, tap-to-discard.
 
 ## Pattern-targeted discards (`bestDiscardsForPattern`)
 

@@ -324,6 +324,12 @@ function update() {
   if (n === 0) {
     setStatus('Tap tiles above to build your hand. Add 13 tiles to see your waits, or 14 to check a win.', 'idle');
     els.suggestions.innerHTML = '';
+    // Keep Learn-section chase checkboxes and advice in sync even when empty,
+    // otherwise stale "discard:" advice survives a Clear hand.
+    els.learnList.querySelectorAll('.learn-chase-cb').forEach(cb => {
+      cb.checked = cb.dataset.pattern === state.targetPattern;
+    });
+    renderLearnDiscardAdvice();
     return;
   }
 
@@ -584,11 +590,15 @@ function renderOpponentDiscards() {
     taiInput.step = '1';
     taiInput.value = state.oppTai[i];
     taiInput.title = 'Visible tai from exposed melds (kongs, pungs of winds/dragons, etc.)';
+    // 'input' would re-render this row on each keystroke and drop focus;
+    // update state live but only re-render the safety panel, then do a
+    // full sync on 'change' (blur / arrow keys).
     taiInput.addEventListener('input', () => {
       const v = parseInt(taiInput.value, 10);
       state.oppTai[i] = v >= 0 ? v : 0;
-      update();
+      renderSafety();
     });
+    taiInput.addEventListener('change', () => update());
     taiWrap.appendChild(taiInput);
     header.appendChild(taiWrap);
     row.appendChild(header);
@@ -673,7 +683,8 @@ function renderSafety() {
   const taiHint = hasTaiWeighting
     ? ' Tai weighting active — tiles are penalized for being live against high-tai opponents.'
     : '';
-  hint.textContent = modeHint + taiHint;
+  hint.textContent = modeHint + taiHint +
+    ' Heuristics only — "safe vs them" reads assume opponents cannot win on tiles they passed; confirm your table\'s convention.';
   box.appendChild(hint);
   els.safetyResults.appendChild(box);
 }

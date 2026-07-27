@@ -22,7 +22,13 @@ A lightweight web app that helps players understand the winning combinations of 
 - **Self-draw bonus** — an optional extra each player adds when the winner self-draws (some tables give e.g. $2 per player on top of the doubled rate). The payout table has a dedicated "Self-draw, each pays" column and shows the winner's collect for both discard and self-draw wins.
 - **Closest-pattern suggestions** — while your hand is still forming, the app ranks Singapore winning patterns by how many tiles away you are, so you can decide what to aim for. At 14 tiles, each pattern card also shows **which tile(s) to throw** to chase that specific pattern.
 - **Chase a hand** — tap "☆ Chase this hand" on any pattern to pin it as your target; the app then focuses its throw suggestions on that pattern until you unpin it.
-- **Discard tracker & safe-tile analysis** — record each opponent's last 5 discards (select an opponent tab, then tap tiles in the palette). Every tile in your hand gets a safety rating (Safe / Caution / Risky) with reasons: tiles an opponent already discarded are safest, dead honors are safe, fresh honors are flagged risky.
+- **Discard tracker & safe-tile analysis** — record each opponent's last 5 discards (select an opponent tab, then use the inline tile picker or the main palette). Every tile in your hand gets a safety score with grouped Safe / Caution / Risky results and per-signal reasons:
+  - **Genbutsu (現物)** — tiles an opponent already passed on are the strongest safe signal.
+  - **Suji (筋)** — two-sided-wait partners of discarded tiles (1↔4, 2↔5, … 6↔9), with a toggle for chow-heavy vs pung-heavy tables (full vs half suji weight).
+  - **Kabe (壁) / one-chance** — sequence paths blocked by 3–4 visible copies; fully dead tiles (all 4 visible) are safe against everyone.
+  - **Late-discard weighting** — recent suji sources count for more than early ones.
+  - **Per-opponent tai weighting** — enter each opponent's visible tai (台 outside) and dangerous players penalise live tiles more; safe reads against them earn a bonus.
+- **Chase from the Learn section** — each pattern card has a Chase checkbox; with a 14-tile hand it shows which tiles to discard to move toward that pattern.
 - **Learn section** — every supported pattern with its tai value, difficulty rating, description, and a rendered example hand.
 
 ## Supported winning patterns (Singapore rules)

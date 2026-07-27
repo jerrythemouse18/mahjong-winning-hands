@@ -304,10 +304,19 @@ console.log('discard safety:');
   const sE = ctx.tileSafety(east, hand, opp, true, [0, 0, 0]);
   check('fresh honor is risky', sE.level, 'risky');
   check('fresh honor reason', sE.reasons.some(r => r.text.includes('fresh honor')), true);
-  // Honor with 3 copies visible is dead → safe.
+  // Honor fully dead only at 4 visible; 3 visible leaves a tanki wait live.
   const opp2 = [ctx.parseHand('E'), ctx.parseHand('E'), ctx.parseHand('E')];
   const sDead = ctx.tileSafety(east, hand, opp2, true, [0, 0, 0]);
-  check('dead honor is safe', sDead.level, 'safe');
+  check('dead honor (4 visible) is safe', sDead.level, 'safe');
+  check('dead honor reason says all 4', sDead.reasons.some(r => r.text.includes('all 4')), true);
+  const opp2b = [ctx.parseHand('E'), ctx.parseHand('E'), []];
+  const s3vis = ctx.tileSafety(east, hand, opp2b, true, [0, 0, 0]);
+  check('3-visible honor not called dead', s3vis.reasons.some(r => r.text.includes('all 4')), false);
+  check('3-visible honor warns of pair wait', s3vis.reasons.some(r => r.text.includes('pair wait')), true);
+  // A fully dead tile must not take tai-danger penalties.
+  const sDeadTai = ctx.tileSafety(east, hand, opp2, true, [5, 5, 5]);
+  check('dead tile has no tai-danger', sDeadTai.reasons.some(r => r.type === 'tai-danger'), false);
+  check('dead tile gets tai-safe credit', sDeadTai.reasons.some(r => r.type === 'tai-safe'), true);
   // Nearby same-suit discards raise safety.
   const opp3 = [ctx.parseHand('4s 6s'), ctx.parseHand('3s'), []];
   const sNear = ctx.tileSafety(fiveS, hand, opp3, true, [0, 0, 0]);

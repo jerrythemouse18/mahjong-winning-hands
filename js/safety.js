@@ -9,8 +9,10 @@
  *  3. One-chance / No-chance — all 4 copies visible = completely dead;
  *     3 copies = one-chance (moderate boost).
  *  4. Early vs late discard weighting — later discards are stronger signals.
- *  5. Genbutsu (現物) — exact tiles already discarded by an opponent are
- *     100% safe against that opponent.
+ *  5. Genbutsu (現物) — exact tiles an opponent already discarded are very
+ *     safe against them. (Note: the hard furiten guarantee is a riichi rule;
+ *     Singapore house rules vary on winning off a tile you discarded, so we
+ *     treat it as a strong signal rather than an absolute.)
  *  6. Assumption mode — "chow" (Ping Hu assumption, full suji weight) vs
  *     "mixed" (half suji weight, for pung-heavy tables).
  *
@@ -64,22 +66,27 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow, oppTai) {
   const visible = visibleCounts(handCounts, oppDiscards);
   const sujiMultiplier = assumeChow ? 1.0 : 0.5;
 
-  // Track per-opponent safety status for tai weighting
-  const oppSafe = [false, false, false]; // true if genbutsu or suji-safe against opponent i
+  // Track per-opponent safety status for tai weighting.
+  // 0 = live, 1 = suji coverage (heuristic), 2 = genbutsu/dead (hard).
+  const oppSafe = [0, 0, 0];
 
   // --- 1. Genbutsu: exact tile discarded by opponent(s) ---
   const discardedBy = oppDiscards.filter((list, i) => {
     const has = list.includes(tile);
-    if (has) oppSafe[i] = true;
+    if (has) oppSafe[i] = 2;
     return has;
   }).length;
   if (discardedBy > 0) {
     score += 5 * discardedBy;
     reasons.push({
       type: 'genbutsu',
-      text: `discarded by ${discardedBy} opponent${discardedBy > 1 ? 's' : ''} (100% safe vs them)`,
+      text: `discarded by ${discardedBy} opponent${discardedBy > 1 ? 's' : ''} (they passed on it — very safe)`,
     });
   }
+
+  // A tile with all 4 copies visible cannot complete anyone's hand.
+  const fullyDead = visible[tile] >= 4;
+  if (fullyDead) oppSafe.fill(2);
 
   // --- 2. Suji inference (suited tiles only) ---
   if (isSuited(tile)) {
@@ -94,7 +101,7 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow, oppTai) {
       const sourceId = suit * 9 + (r - 1);
       const sourceDiscardedBy = oppDiscards.filter((list, i) => {
         const has = list.includes(sourceId);
-        if (has) oppSafe[i] = true; // suji coverage from this opponent
+        if (has) oppSafe[i] = Math.max(oppSafe[i], 1); // suji coverage (heuristic)
         return has;
       }).length;
       if (sourceDiscardedBy > 0) {
@@ -175,9 +182,13 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow, oppTai) {
   // --- 5. Honor tile specifics ---
   if (isHonor(tile)) {
     const totalVisible = visible[tile];
-    if (totalVisible >= 3) {
+    if (totalVisible >= 4) {
       score += 4;
-      reasons.push({ type: 'dead-honor', text: 'honor is dead — no pung/pair win possible' });
+      reasons.push({ type: 'dead-honor', text: 'honor is dead — all 4 copies visible, no win possible' });
+    } else if (totalVisible === 3) {
+      // Pung impossible, but the last copy can still win a tanki (pair) wait.
+      score += 2;
+      reasons.push({ type: 'dead-honor', text: 'pung impossible (3 visible) — a pair wait on the last copy is still possible' });
     } else if (totalVisible <= handCounts[tile] && discardedBy === 0) {
       // Only copies visible are in our own hand — no opponent has shown it
       score -= 3;
@@ -241,13 +252,21 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow, oppTai) {
     for (let i = 0; i < 3; i++) {
       const tai = oppTai[i];
       if (tai <= 0) continue;
-      if (oppSafe[i]) {
-        // This tile is safe (genbutsu/suji) against the dangerous player — bonus
+      if (oppSafe[i] === 2) {
+        // Hard-safe (genbutsu or dead tile) against the dangerous player — full bonus
         const bonus = Math.ceil(tai * 0.75);
         score += bonus;
         reasons.push({
           type: 'tai-safe',
           text: `safe vs ${OPPONENT_NAMES[i].split(' (')[0]} (${tai} tai outside)`,
+        });
+      } else if (oppSafe[i] === 1) {
+        // Suji coverage only — heuristic, scale by the mode's suji trust
+        const bonus = Math.ceil(tai * 0.75 * sujiMultiplier * 0.5);
+        score += bonus;
+        reasons.push({
+          type: 'tai-safe',
+          text: `suji-safe vs ${OPPONENT_NAMES[i].split(' (')[0]} (${tai} tai outside) — heuristic only`,
         });
       } else {
         // This tile is live against a dangerous player — penalty
