@@ -3,4 +3,4 @@
  * Bump this with every release so it's obvious when GitHub Pages
  * has picked up the latest commit.
  */
-const APP_VERSION = 'v0.12.0-tracker-preview';
+const APP_VERSION = 'v0.12.0';
