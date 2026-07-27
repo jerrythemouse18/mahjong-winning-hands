@@ -40,6 +40,8 @@ const els = {
   payMode: document.getElementById('pay-mode'),
   payoutTable: document.getElementById('payout-table'),
   opponentTabs: document.getElementById('opponent-tabs'),
+  discardPicker: document.getElementById('discard-picker'),
+  discardPalette: document.getElementById('discard-palette'),
   opponentDiscards: document.getElementById('opponent-discards'),
   safetyResults: document.getElementById('safety-results'),
 };
@@ -509,11 +511,42 @@ function buildOpponentTabs() {
   });
 }
 
+function buildDiscardPalette() {
+  const groups = [
+    { title: 'Characters 萬', ids: [...Array(9)].map((_, i) => i) },
+    { title: 'Dots 筒', ids: [...Array(9)].map((_, i) => 9 + i) },
+    { title: 'Bamboo 條', ids: [...Array(9)].map((_, i) => 18 + i) },
+    { title: 'Winds & Dragons', ids: [27, 28, 29, 30, 31, 32, 33] },
+  ];
+  for (const g of groups) {
+    const section = document.createElement('div');
+    section.className = 'palette-group compact';
+    const h = document.createElement('h4');
+    h.textContent = g.title;
+    section.appendChild(h);
+    const row = document.createElement('div');
+    row.className = 'palette-row';
+    for (const id of g.ids) {
+      const btn = tileButton(id, { onClick: addTile });
+      btn.dataset.tileId = id;
+      row.appendChild(btn);
+    }
+    section.appendChild(row);
+    els.discardPalette.appendChild(section);
+  }
+}
+
 function setInputTarget(i) {
   state.inputTarget = i;
   els.opponentTabs.querySelectorAll('.opp-tab').forEach((btn, idx) => {
     btn.classList.toggle('active', idx - 1 === i);
   });
+  // Auto-open the inline picker when an opponent is selected, close when back to 'My hand'
+  if (i >= 0) {
+    els.discardPicker.open = true;
+  } else {
+    els.discardPicker.open = false;
+  }
   update();
 }
 
@@ -608,6 +641,7 @@ document.getElementById('version-badge').textContent = APP_VERSION;
 buildPalette();
 buildTableControls();
 buildOpponentTabs();
+buildDiscardPalette();
 buildLearn();
 els.clearBtn.addEventListener('click', clearHand);
 update();

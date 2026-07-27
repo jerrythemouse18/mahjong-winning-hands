@@ -381,3 +381,49 @@ footer {
   .tile-main { font-size: 1.05rem; }
   .tile-sub { font-size: 0.72rem; }
 }
+
+/* Collapsible discard picker in section 5 */
+.discard-picker {
+  margin: 10px 0;
+  border: 1px solid var(--border, #374151);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.discard-picker summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--panel-2, #1f2937);
+  user-select: none;
+}
+.discard-picker summary:hover {
+  background: var(--panel, #283040);
+}
+.discard-picker[open] summary {
+  border-bottom: 1px solid var(--border, #374151);
+}
+#discard-palette {
+  padding: 10px;
+}
+#discard-palette .palette-group.compact {
+  margin-bottom: 8px;
+}
+#discard-palette .palette-group.compact h4 {
+  font-size: 0.78rem;
+  color: var(--muted, #9ca3af);
+  margin: 0 0 4px;
+}
+#discard-palette .palette-row {
+  gap: 4px;
+}
+#discard-palette .tile {
+  width: 34px;
+  height: 48px;
+}
+#discard-palette .tile-main {
+  font-size: 0.95rem;
+}
+#discard-palette .tile-sub {
+  font-size: 0.65rem;
+}
