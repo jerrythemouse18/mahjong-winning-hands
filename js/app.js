@@ -15,7 +15,9 @@ const state = {
   selfDrawBonus: 0,
   targetPattern: null, // pattern id the user chose to chase, or null for auto
   oppDiscards: [[], [], []], // recent discards per opponent, oldest first
+  oppTai: [0, 0, 0], // visible tai outside per opponent (from exposed melds)
   inputTarget: -1, // -1 = taps add to my hand; 0..2 = record that opponent's discard
+  assumeChow: true, // true = suji full weight (Ping Hu assumption); false = half
 };
 
 const els = {
@@ -40,6 +42,8 @@ const els = {
   payMode: document.getElementById('pay-mode'),
   payoutTable: document.getElementById('payout-table'),
   opponentTabs: document.getElementById('opponent-tabs'),
+  discardPicker: document.getElementById('discard-picker'),
+  discardPalette: document.getElementById('discard-palette'),
   opponentDiscards: document.getElementById('opponent-discards'),
   safetyResults: document.getElementById('safety-results'),
 };
@@ -145,6 +149,7 @@ function clearHand() {
   state.bonusTiles.clear();
   state.winContext.clear();
   state.oppDiscards = [[], [], []];
+  state.oppTai = [0, 0, 0];
   state.targetPattern = null;
   els.bonusPalette.querySelectorAll('.tile').forEach(b => b.classList.remove('selected'));
   els.winContext.querySelectorAll('input').forEach(cb => { cb.checked = false; });
@@ -319,6 +324,12 @@ function update() {
   if (n === 0) {
     setStatus('Tap tiles above to build your hand. Add 13 tiles to see your waits, or 14 to check a win.', 'idle');
     els.suggestions.innerHTML = '';
+    // Keep Learn-section chase checkboxes and advice in sync even when empty,
+    // otherwise stale "discard:" advice survives a Clear hand.
+    els.learnList.querySelectorAll('.learn-chase-cb').forEach(cb => {
+      cb.checked = cb.dataset.pattern === state.targetPattern;
+    });
+    renderLearnDiscardAdvice();
     return;
   }
 
@@ -347,6 +358,7 @@ function update() {
   }
 
   renderSuggestions();
+  renderLearnDiscardAdvice();
 }
 
 function setStatus(msg, cls) {
@@ -427,6 +439,10 @@ function renderDiscardAdvice() {
 
 function renderSuggestions() {
   els.suggestions.innerHTML = '';
+  // Sync learn section checkboxes with targetPattern
+  els.learnList.querySelectorAll('.learn-chase-cb').forEach(cb => {
+    cb.checked = cb.dataset.pattern === state.targetPattern;
+  });
   const n = totalTiles();
   if (n < 5) {
     els.suggestions.innerHTML = '<p class="hint">Add at least 5 tiles to get pattern suggestions.</p>';
@@ -509,11 +525,42 @@ function buildOpponentTabs() {
   });
 }
 
+function buildDiscardPalette() {
+  const groups = [
+    { title: 'Characters 萬', ids: [...Array(9)].map((_, i) => i) },
+    { title: 'Dots 筒', ids: [...Array(9)].map((_, i) => 9 + i) },
+    { title: 'Bamboo 條', ids: [...Array(9)].map((_, i) => 18 + i) },
+    { title: 'Winds & Dragons', ids: [27, 28, 29, 30, 31, 32, 33] },
+  ];
+  for (const g of groups) {
+    const section = document.createElement('div');
+    section.className = 'palette-group compact';
+    const h = document.createElement('h4');
+    h.textContent = g.title;
+    section.appendChild(h);
+    const row = document.createElement('div');
+    row.className = 'palette-row';
+    for (const id of g.ids) {
+      const btn = tileButton(id, { onClick: addTile });
+      btn.dataset.tileId = id;
+      row.appendChild(btn);
+    }
+    section.appendChild(row);
+    els.discardPalette.appendChild(section);
+  }
+}
+
 function setInputTarget(i) {
   state.inputTarget = i;
   els.opponentTabs.querySelectorAll('.opp-tab').forEach((btn, idx) => {
     btn.classList.toggle('active', idx - 1 === i);
   });
+  // Auto-open the inline picker when an opponent is selected, close when back to 'My hand'
+  if (i >= 0) {
+    els.discardPicker.open = true;
+  } else {
+    els.discardPicker.open = false;
+  }
   update();
 }
 
@@ -522,10 +569,39 @@ function renderOpponentDiscards() {
   OPPONENT_NAMES.forEach((name, i) => {
     const row = document.createElement('div');
     row.className = 'opp-row' + (state.inputTarget === i ? ' recording' : '');
+    const header = document.createElement('div');
+    header.className = 'opp-header';
     const label = document.createElement('span');
     label.className = 'opp-label';
     label.textContent = name + (state.inputTarget === i ? ' — recording' : '');
-    row.appendChild(label);
+    header.appendChild(label);
+    // Tai outside input
+    const taiWrap = document.createElement('span');
+    taiWrap.className = 'opp-tai-wrap';
+    const taiLabel = document.createElement('label');
+    taiLabel.className = 'opp-tai-label';
+    taiLabel.textContent = '台 outside:';
+    taiWrap.appendChild(taiLabel);
+    const taiInput = document.createElement('input');
+    taiInput.type = 'number';
+    taiInput.className = 'opp-tai-input';
+    taiInput.min = '0';
+    taiInput.max = '13';
+    taiInput.step = '1';
+    taiInput.value = state.oppTai[i];
+    taiInput.title = 'Visible tai from exposed melds (kongs, pungs of winds/dragons, etc.)';
+    // 'input' would re-render this row on each keystroke and drop focus;
+    // update state live but only re-render the safety panel, then do a
+    // full sync on 'change' (blur / arrow keys).
+    taiInput.addEventListener('input', () => {
+      const v = parseInt(taiInput.value, 10);
+      state.oppTai[i] = v >= 0 ? v : 0;
+      renderSafety();
+    });
+    taiInput.addEventListener('change', () => update());
+    taiWrap.appendChild(taiInput);
+    header.appendChild(taiWrap);
+    row.appendChild(header);
     const tiles = document.createElement('div');
     tiles.className = 'opp-tiles';
     state.oppDiscards[i].forEach((t, idx) => {
@@ -557,29 +633,58 @@ function renderSafety() {
     }
     return;
   }
-  const ranked = safetyRanking(state.counts, state.oppDiscards);
+  const ranked = safetyRanking(state.counts, state.oppDiscards, state.assumeChow, state.oppTai);
+
+  // Group by safety level
+  const groups = { safe: [], caution: [], risky: [] };
+  for (const r of ranked) groups[r.level].push(r);
+
   const box = document.createElement('div');
   box.className = 'safety-box';
   const h = document.createElement('h3');
-  h.textContent = '🛡️ Safer discards from your hand';
+  h.textContent = '🛡️ Discard safety ranking';
   box.appendChild(h);
-  for (const r of ranked) {
-    const row = document.createElement('div');
-    row.className = `safety-row ${r.level}`;
-    const btn = tileButton(r.tile, { onClick: removeTile });
-    btn.classList.add('mini');
-    btn.title = `Discard ${tileFace(r.tile).label}`;
-    row.appendChild(btn);
-    const info = document.createElement('div');
-    info.className = 'safety-info';
-    const levelText = { safe: 'Safe', caution: 'Caution', risky: 'Risky' }[r.level];
-    info.innerHTML = `<span class="safety-level">${levelText}</span> ${r.reasons.join('; ')}`;
-    row.appendChild(info);
-    box.appendChild(row);
+
+  for (const [level, label, icon] of [['safe', 'Safe', '✅'], ['caution', 'Caution', '⚠️'], ['risky', 'Risky', '🚫']]) {
+    if (!groups[level].length) continue;
+    const groupDiv = document.createElement('div');
+    groupDiv.className = `safety-group safety-group-${level}`;
+    const groupHead = document.createElement('div');
+    groupHead.className = 'safety-group-head';
+    groupHead.textContent = `${icon} ${label}`;
+    groupDiv.appendChild(groupHead);
+
+    for (const r of groups[level]) {
+      const row = document.createElement('div');
+      row.className = `safety-row ${r.level}`;
+      const btn = tileButton(r.tile, { onClick: removeTile });
+      btn.classList.add('mini');
+      btn.title = `Discard ${tileFace(r.tile).label}`;
+      row.appendChild(btn);
+      const info = document.createElement('div');
+      info.className = 'safety-info';
+      const reasonTexts = r.reasons.map(reason => {
+        const typeClass = `reason-${reason.type}`;
+        return `<span class="safety-reason ${typeClass}">${reason.text}</span>`;
+      });
+      info.innerHTML = `<span class="safety-score">${r.score} pts</span> ${reasonTexts.join('<br>')}`;
+      row.appendChild(info);
+      groupDiv.appendChild(row);
+    }
+    box.appendChild(groupDiv);
   }
+
+  const hasTaiWeighting = state.oppTai.some(t => t > 0);
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.textContent = 'Heuristic only — tiles an opponent already discarded are the safest; fresh honors are the most dangerous. Tap a tile to discard it.';
+  const modeHint = state.assumeChow
+    ? 'Suji (筋) at full weight — assumes opponents are building chow/run hands.'
+    : 'Mixed mode — suji at half weight (opponents may be collecting triplets).';
+  const taiHint = hasTaiWeighting
+    ? ' Tai weighting active — tiles are penalized for being live against high-tai opponents.'
+    : '';
+  hint.textContent = modeHint + taiHint +
+    ' Heuristics only — "safe vs them" reads assume opponents cannot win on tiles they passed; confirm your table\'s convention.';
   box.appendChild(hint);
   els.safetyResults.appendChild(box);
 }
@@ -590,16 +695,75 @@ function buildLearn() {
   for (const p of [...PATTERNS].sort((a, b) => a.difficulty - b.difficulty)) {
     const card = document.createElement('div');
     card.className = 'learn-card';
+    card.dataset.patternId = p.id;
     const stars = '★'.repeat(p.difficulty) + '☆'.repeat(5 - p.difficulty);
     card.innerHTML = `
-      <div class="learn-head"><strong>${p.name}</strong><span class="tai-badge">${p.tai} tai</span><span class="stars" title="Difficulty">${stars}</span></div>
+      <div class="learn-head">
+        <label class="learn-chase-label"><input type="checkbox" class="learn-chase-cb" data-pattern="${p.id}"> Chase</label>
+        <strong>${p.name}</strong><span class="tai-badge">${p.tai} tai</span><span class="stars" title="Difficulty">${stars}</span>
+      </div>
       <p>${p.description}</p>
-      <div class="learn-example"></div>`;
+      <div class="learn-example"></div>
+      <div class="learn-discard-advice"></div>`;
     const exampleRow = card.querySelector('.learn-example');
     const ids = parseHand(p.example.replace(/\+.*$/, ''));
     for (const id of ids) exampleRow.appendChild(tileButton(id, {}));
+    card.querySelector('.learn-chase-cb').addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      // Uncheck all others (radio-like behavior)
+      els.learnList.querySelectorAll('.learn-chase-cb').forEach(cb => {
+        if (cb !== e.target) cb.checked = false;
+      });
+      state.targetPattern = checked ? p.id : null;
+      update();
+    });
     els.learnList.appendChild(card);
   }
+}
+
+function renderLearnDiscardAdvice() {
+  const n = totalTiles();
+  els.learnList.querySelectorAll('.learn-card').forEach(card => {
+    const adviceEl = card.querySelector('.learn-discard-advice');
+    adviceEl.innerHTML = '';
+    const cb = card.querySelector('.learn-chase-cb');
+    if (!cb.checked) return;
+    if (n === 0) {
+      adviceEl.innerHTML = '<p class="hint">Add tiles to your hand to get discard suggestions.</p>';
+      return;
+    }
+    const patternId = cb.dataset.pattern;
+    const fn = PATTERN_DISTANCE[patternId];
+    if (!fn) {
+      adviceEl.innerHTML = '<p class="hint">No distance heuristic available for this pattern.</p>';
+      return;
+    }
+    const distance = fn(state.counts.slice());
+    if (distance <= 0) {
+      adviceEl.innerHTML = '<p class="hint chase-complete">✅ Your hand already matches this pattern!</p>';
+      return;
+    }
+    const distLabel = distance === 1 ? '1 tile away' : `${distance} tiles away`;
+    if (n < 14) {
+      adviceEl.innerHTML = `<p class="hint">You are ~${distLabel} from this pattern. Fill your hand to 14 tiles to see discard suggestions.</p>`;
+      return;
+    }
+    const throwTiles = bestDiscardsForPattern(state.counts, patternId, 5);
+    if (!throwTiles.length) {
+      adviceEl.innerHTML = `<p class="hint">~${distLabel}. No clear discard found to get closer.</p>`;
+      return;
+    }
+    const box = document.createElement('div');
+    box.className = 'learn-advice-box';
+    box.innerHTML = `<span class="learn-advice-label">~${distLabel} — discard:</span>`;
+    for (const t of throwTiles) {
+      const btn = tileButton(t, { onClick: removeTile });
+      btn.classList.add('mini');
+      btn.title = `Discard ${tileFace(t).label}`;
+      box.appendChild(btn);
+    }
+    adviceEl.appendChild(box);
+  });
 }
 
 /* ---------- init ---------- */
@@ -608,6 +772,16 @@ document.getElementById('version-badge').textContent = APP_VERSION;
 buildPalette();
 buildTableControls();
 buildOpponentTabs();
+buildDiscardPalette();
 buildLearn();
 els.clearBtn.addEventListener('click', clearHand);
+
+// Safety mode toggle
+document.querySelectorAll('input[name="safety-mode"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    state.assumeChow = radio.value === 'chow';
+    update();
+  });
+});
+
 update();

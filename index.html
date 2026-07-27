@@ -86,8 +86,16 @@
 
     <section id="safety-section">
       <h2>5 · Opponents' discards & safe tiles</h2>
-      <p class="hint">Select an opponent, then tap tiles in the palette above to record their recent discards (last 5 rounds each, oldest drops off). Tap a recorded tile to remove it.</p>
+      <p class="hint">Select an opponent, then tap tiles below (or in the palette above) to record their recent discards (last 5 rounds each, oldest drops off). Tap a recorded tile to remove it.</p>
       <div id="opponent-tabs" class="stake-presets"></div>
+      <div id="safety-mode" class="safety-mode-row">
+        <label class="safety-mode-label"><input type="radio" name="safety-mode" value="chow" checked> Assume chow hands (筋 full weight)</label>
+        <label class="safety-mode-label"><input type="radio" name="safety-mode" value="mixed"> Mixed (pung-heavy table, 筋 half weight)</label>
+      </div>
+      <details id="discard-picker" class="discard-picker">
+        <summary>Tile picker (tap to expand)</summary>
+        <div id="discard-palette"></div>
+      </details>
       <div id="opponent-discards"></div>
       <div id="safety-results"></div>
     </section>

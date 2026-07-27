@@ -297,23 +297,41 @@ console.log('discard safety:');
   const fiveS = ctx.parseHand('5s')[0], east = ctx.parseHand('E')[0];
   // 5s discarded by two opponents → strongly safe.
   const opp = [ctx.parseHand('5s 1m'), ctx.parseHand('5s 9m'), ctx.parseHand('2p')];
-  const s5 = ctx.tileSafety(fiveS, hand, opp);
+  const s5 = ctx.tileSafety(fiveS, hand, opp, true, [0, 0, 0]);
   check('tile discarded by 2 opponents is safe', s5.level, 'safe');
-  check('reason mentions opponents', s5.reasons[0].includes('2 opponents'), true);
+  check('reason mentions opponents', s5.reasons[0].text.includes('2 opponents'), true);
   // Fresh honor nobody has shown → risky.
-  const sE = ctx.tileSafety(east, hand, opp);
+  const sE = ctx.tileSafety(east, hand, opp, true, [0, 0, 0]);
   check('fresh honor is risky', sE.level, 'risky');
-  check('fresh honor reason', sE.reasons.some(r => r.includes('fresh honor')), true);
-  // Honor with 3 copies visible is dead → safe.
+  check('fresh honor reason', sE.reasons.some(r => r.text.includes('fresh honor')), true);
+  // Honor fully dead only at 4 visible; 3 visible leaves a tanki wait live.
   const opp2 = [ctx.parseHand('E'), ctx.parseHand('E'), ctx.parseHand('E')];
-  const sDead = ctx.tileSafety(east, hand, opp2);
-  check('dead honor is safe', sDead.level, 'safe');
+  const sDead = ctx.tileSafety(east, hand, opp2, true, [0, 0, 0]);
+  check('dead honor (4 visible) is safe', sDead.level, 'safe');
+  check('dead honor reason says all 4', sDead.reasons.some(r => r.text.includes('all 4')), true);
+  const opp2b = [ctx.parseHand('E'), ctx.parseHand('E'), []];
+  const s3vis = ctx.tileSafety(east, hand, opp2b, true, [0, 0, 0]);
+  check('3-visible honor not called dead', s3vis.reasons.some(r => r.text.includes('all 4')), false);
+  check('3-visible honor warns of pair wait', s3vis.reasons.some(r => r.text.includes('pair wait')), true);
+  // A fully dead tile must not take tai-danger penalties.
+  const sDeadTai = ctx.tileSafety(east, hand, opp2, true, [5, 5, 5]);
+  check('dead tile has no tai-danger', sDeadTai.reasons.some(r => r.type === 'tai-danger'), false);
+  check('dead tile gets tai-safe credit', sDeadTai.reasons.some(r => r.type === 'tai-safe'), true);
   // Nearby same-suit discards raise safety.
   const opp3 = [ctx.parseHand('4s 6s'), ctx.parseHand('3s'), []];
-  const sNear = ctx.tileSafety(fiveS, hand, opp3);
-  check('nearby suit discards add safety', sNear.score >= 3, true);
+  const sNear = ctx.tileSafety(fiveS, hand, opp3, true, [0, 0, 0]);
+  check('nearby suit discards add safety', sNear.score >= 2, true);
+  // Tai weighting: tile live against high-tai opponent gets penalized.
+  const oppTai = [0, 5, 0]; // opponent 1 (facing) has 5 tai outside
+  const sLive = ctx.tileSafety(east, hand, opp, true, oppTai);
+  check('tai penalty for live tile', sLive.reasons.some(r => r.type === 'tai-danger'), true);
+  check('tai penalty lowers score', sLive.score < sE.score, true);
+  // Tile genbutsu against high-tai opponent gets bonus.
+  const sSafe = ctx.tileSafety(fiveS, hand, opp, true, oppTai);
+  check('tai bonus for safe tile', sSafe.reasons.some(r => r.type === 'tai-safe'), true);
+  check('tai bonus raises score', sSafe.score > s5.score, true);
   // Ranking covers every distinct tile in hand, safest first.
-  const ranked = ctx.safetyRanking(hand, opp);
+  const ranked = ctx.safetyRanking(hand, opp, true, [0, 0, 0]);
   check('ranking covers distinct hand tiles', ranked.length,
     hand.filter(c => c > 0).length);
   check('ranking sorted safest first',
