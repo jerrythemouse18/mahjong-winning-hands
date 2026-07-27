@@ -15,6 +15,7 @@ const state = {
   selfDrawBonus: 0,
   targetPattern: null, // pattern id the user chose to chase, or null for auto
   oppDiscards: [[], [], []], // recent discards per opponent, oldest first
+  oppTai: [0, 0, 0], // visible tai outside per opponent (from exposed melds)
   inputTarget: -1, // -1 = taps add to my hand; 0..2 = record that opponent's discard
   assumeChow: true, // true = suji full weight (Ping Hu assumption); false = half
 };
@@ -148,6 +149,7 @@ function clearHand() {
   state.bonusTiles.clear();
   state.winContext.clear();
   state.oppDiscards = [[], [], []];
+  state.oppTai = [0, 0, 0];
   state.targetPattern = null;
   els.bonusPalette.querySelectorAll('.tile').forEach(b => b.classList.remove('selected'));
   els.winContext.querySelectorAll('input').forEach(cb => { cb.checked = false; });
@@ -561,10 +563,35 @@ function renderOpponentDiscards() {
   OPPONENT_NAMES.forEach((name, i) => {
     const row = document.createElement('div');
     row.className = 'opp-row' + (state.inputTarget === i ? ' recording' : '');
+    const header = document.createElement('div');
+    header.className = 'opp-header';
     const label = document.createElement('span');
     label.className = 'opp-label';
     label.textContent = name + (state.inputTarget === i ? ' — recording' : '');
-    row.appendChild(label);
+    header.appendChild(label);
+    // Tai outside input
+    const taiWrap = document.createElement('span');
+    taiWrap.className = 'opp-tai-wrap';
+    const taiLabel = document.createElement('label');
+    taiLabel.className = 'opp-tai-label';
+    taiLabel.textContent = '台 outside:';
+    taiWrap.appendChild(taiLabel);
+    const taiInput = document.createElement('input');
+    taiInput.type = 'number';
+    taiInput.className = 'opp-tai-input';
+    taiInput.min = '0';
+    taiInput.max = '13';
+    taiInput.step = '1';
+    taiInput.value = state.oppTai[i];
+    taiInput.title = 'Visible tai from exposed melds (kongs, pungs of winds/dragons, etc.)';
+    taiInput.addEventListener('input', () => {
+      const v = parseInt(taiInput.value, 10);
+      state.oppTai[i] = v >= 0 ? v : 0;
+      update();
+    });
+    taiWrap.appendChild(taiInput);
+    header.appendChild(taiWrap);
+    row.appendChild(header);
     const tiles = document.createElement('div');
     tiles.className = 'opp-tiles';
     state.oppDiscards[i].forEach((t, idx) => {
@@ -596,7 +623,7 @@ function renderSafety() {
     }
     return;
   }
-  const ranked = safetyRanking(state.counts, state.oppDiscards, state.assumeChow);
+  const ranked = safetyRanking(state.counts, state.oppDiscards, state.assumeChow, state.oppTai);
 
   // Group by safety level
   const groups = { safe: [], caution: [], risky: [] };
@@ -637,11 +664,16 @@ function renderSafety() {
     box.appendChild(groupDiv);
   }
 
+  const hasTaiWeighting = state.oppTai.some(t => t > 0);
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.textContent = state.assumeChow
-    ? 'Suji (筋) at full weight — assumes opponents are building chow/run hands. Switch to Mixed mode for pung-heavy tables.'
-    : 'Mixed mode — suji at half weight (opponents may be collecting triplets). Switch to Chow mode for run-based tables.';
+  const modeHint = state.assumeChow
+    ? 'Suji (筋) at full weight — assumes opponents are building chow/run hands.'
+    : 'Mixed mode — suji at half weight (opponents may be collecting triplets).';
+  const taiHint = hasTaiWeighting
+    ? ' Tai weighting active — tiles are penalized for being live against high-tai opponents.'
+    : '';
+  hint.textContent = modeHint + taiHint;
   box.appendChild(hint);
   els.safetyResults.appendChild(box);
 }

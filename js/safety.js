@@ -55,16 +55,24 @@ function visibleCounts(handCounts, oppDiscards) {
  * @param handCounts    your hand (counts[34])
  * @param oppDiscards   [[ids], [ids], [ids]] recent discards per opponent
  * @param assumeChow   true = full suji weight (Ping Hu assumption); false = half
+ * @param oppTai        [number, number, number] tai outside per opponent (0 = unknown/none)
  */
-function tileSafety(tile, handCounts, oppDiscards, assumeChow) {
+function tileSafety(tile, handCounts, oppDiscards, assumeChow, oppTai) {
   let score = 0;
   const reasons = [];
   const allDiscards = oppDiscards.flat();
   const visible = visibleCounts(handCounts, oppDiscards);
   const sujiMultiplier = assumeChow ? 1.0 : 0.5;
 
+  // Track per-opponent safety status for tai weighting
+  const oppSafe = [false, false, false]; // true if genbutsu or suji-safe against opponent i
+
   // --- 1. Genbutsu: exact tile discarded by opponent(s) ---
-  const discardedBy = oppDiscards.filter(list => list.includes(tile)).length;
+  const discardedBy = oppDiscards.filter((list, i) => {
+    const has = list.includes(tile);
+    if (has) oppSafe[i] = true;
+    return has;
+  }).length;
   if (discardedBy > 0) {
     score += 5 * discardedBy;
     reasons.push({
@@ -84,7 +92,11 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow) {
       if (!partners || !partners.includes(rank)) continue;
       // r was discarded → our tile (rank) is a suji partner
       const sourceId = suit * 9 + (r - 1);
-      const sourceDiscardedBy = oppDiscards.filter(list => list.includes(sourceId)).length;
+      const sourceDiscardedBy = oppDiscards.filter((list, i) => {
+        const has = list.includes(sourceId);
+        if (has) oppSafe[i] = true; // suji coverage from this opponent
+        return has;
+      }).length;
       if (sourceDiscardedBy > 0) {
         sujiSources.push({ rank: r, count: sourceDiscardedBy });
       }
@@ -166,7 +178,8 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow) {
     if (totalVisible >= 3) {
       score += 4;
       reasons.push({ type: 'dead-honor', text: 'honor is dead — no pung/pair win possible' });
-    } else if (totalVisible === 0 && discardedBy === 0) {
+    } else if (totalVisible <= handCounts[tile] && discardedBy === 0) {
+      // Only copies visible are in our own hand — no opponent has shown it
       score -= 3;
       reasons.push({ type: 'fresh-honor', text: 'fresh honor — someone may be collecting' });
     }
@@ -221,6 +234,33 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow) {
     }
   }
 
+  // --- 8. Per-player tai weighting ---
+  // If an opponent has high tai outside (visible from exposed melds), penalize tiles
+  // that are live (not safe) against them, and reward tiles that ARE safe against them.
+  if (oppTai && oppTai.some(t => t > 0)) {
+    for (let i = 0; i < 3; i++) {
+      const tai = oppTai[i];
+      if (tai <= 0) continue;
+      if (oppSafe[i]) {
+        // This tile is safe (genbutsu/suji) against the dangerous player — bonus
+        const bonus = Math.ceil(tai * 0.75);
+        score += bonus;
+        reasons.push({
+          type: 'tai-safe',
+          text: `safe vs ${OPPONENT_NAMES[i].split(' (')[0]} (${tai} tai outside)`,
+        });
+      } else {
+        // This tile is live against a dangerous player — penalty
+        const penalty = tai;
+        score -= penalty;
+        reasons.push({
+          type: 'tai-danger',
+          text: `live vs ${OPPONENT_NAMES[i].split(' (')[0]} (${tai} tai outside) — avoid shooting`,
+        });
+      }
+    }
+  }
+
   // --- Classify ---
   const level = score >= 10 ? 'safe' : score >= 5 ? 'caution' : 'risky';
   if (!reasons.length) reasons.push({ type: 'none', text: 'no information — treat as live' });
@@ -228,10 +268,10 @@ function tileSafety(tile, handCounts, oppDiscards, assumeChow) {
 }
 
 /** Rank every distinct tile in the hand, safest first. */
-function safetyRanking(handCounts, oppDiscards, assumeChow) {
+function safetyRanking(handCounts, oppDiscards, assumeChow, oppTai) {
   const out = [];
   for (let t = 0; t < TILE_COUNT; t++) {
-    if (handCounts[t] > 0) out.push(tileSafety(t, handCounts, oppDiscards, assumeChow));
+    if (handCounts[t] > 0) out.push(tileSafety(t, handCounts, oppDiscards, assumeChow, oppTai));
   }
   out.sort((a, b) => b.score - a.score);
   return out;
