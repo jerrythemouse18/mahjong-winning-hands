@@ -11,6 +11,7 @@ const tEls = {
   },
   state: document.getElementById('tracker-state'),
   players: document.getElementById('tracker-players'),
+  bite: document.getElementById('tracker-bite'),
   entry: document.getElementById('tracker-entry'),
   history: document.getElementById('tracker-history'),
   undo: document.getElementById('tracker-undo'),
@@ -76,10 +77,39 @@ function renderTrackerPlayers() {
     stats.className = 'player-stats';
     const t = totals[i];
     stats.innerHTML = `${t.wins} win${t.wins === 1 ? '' : 's'} · ${t.tai} tai` +
-      `<br>${t.selfDraws} self-draw · shot ${t.shot}×`;
+      `<br>${t.selfDraws} self-draw · shot ${t.shot}×` +
+      `<br>${t.bites} bite${t.bites === 1 ? '' : 's'} · ${t.biteTai} bite tai`;
     card.appendChild(stats);
     tEls.players.appendChild(card);
   });
+}
+
+/* ---------- bite / kong recording ---------- */
+
+function renderTrackerBite() {
+  tEls.bite.innerHTML = '';
+  const b = tracker.biteDraft;
+
+  tEls.bite.appendChild(choiceRow('Who got it?',
+    tracker.players.map((name, i) => ({ label: name, value: i })),
+    v => b.player === v,
+    v => { b.player = v; }));
+
+  tEls.bite.appendChild(choiceRow('What happened?',
+    TRACKER_BITE_TYPES.map(t => ({ label: `${t.label} (${t.tai} tai)`, value: t.id })),
+    v => b.type === v,
+    v => { b.type = v; }));
+
+  const actions = document.createElement('div');
+  actions.className = 'entry-actions';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'record-btn bite-btn';
+  btn.textContent = '💰 Record bite';
+  btn.disabled = b.player === null || b.type === null;
+  btn.addEventListener('click', () => { trackerRecordBite(); renderTracker(); });
+  actions.appendChild(btn);
+  tEls.bite.appendChild(actions);
 }
 
 /* ---------- record entry (button-first) ---------- */
@@ -188,6 +218,14 @@ function renderTrackerHistory() {
   for (const e of [...tracker.history].reverse()) {
     const tr = document.createElement('tr');
     const windChar = TRACKER_WINDS[e.wind].split(' ')[1];
+    if (e.kind === 'bite') {
+      const type = TRACKER_BITE_TYPES.find(t => t.id === e.type);
+      tr.className = 'history-bite';
+      tr.innerHTML = `<td>${e.hand}</td><td>${windChar}</td>` +
+        `<td>${tracker.players[e.player]}</td><td>${e.tai}</td><td>💰 ${type ? type.label : e.type}</td>`;
+      tbody.appendChild(tr);
+      continue;
+    }
     if (e.winner === null) {
       tr.innerHTML = `<td>${e.hand}</td><td>${windChar}</td><td colspan="3" class="history-draw">Draw 流局</td>`;
     } else {
@@ -208,6 +246,7 @@ function renderTrackerHistory() {
 function renderTracker() {
   renderTrackerState();
   renderTrackerPlayers();
+  renderTrackerBite();
   renderTrackerEntry();
   renderTrackerHistory();
 }

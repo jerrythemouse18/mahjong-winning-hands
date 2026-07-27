@@ -15,21 +15,30 @@
 const TRACKER_STORAGE_KEY = 'mahjong-tracker-v1';
 const TRACKER_WINDS = ['East 東', 'South 南', 'West 西', 'North 北'];
 
+/** Bite events: instant payouts collected from every player mid-hand. */
+const TRACKER_BITE_TYPES = [
+  { id: 'animal', label: 'Animal 動物', tai: 1 },
+  { id: 'open-kong', label: 'Open kong 明槓', tai: 1 },
+  { id: 'hidden-kong', label: 'Hidden kong 暗槓', tai: 2 },
+];
+
 const tracker = {
   players: ['Player 1', 'Player 2', 'Player 3', 'Player 4'],
   prevailingWind: 0, // 0..3 index into TRACKER_WINDS
   dealerSeat: 0,     // 0..3 whose deal it is
   handNumber: 1,     // running count of hands played
-  history: [],       // [{hand, wind, dealerSeat, winner, tai, how, shooter}]
-  // entry-in-progress
+  history: [],       // hand entries {kind:'hand', hand, wind, dealerSeat, winner, tai, how, shooter}
+                     // and bite entries {kind:'bite', hand, wind, player, type, tai}
+  // entries-in-progress
   draft: { winner: null, tai: null, how: null, shooter: null },
+  biteDraft: { player: null, type: null },
 };
 
 /* ---------- persistence ---------- */
 
 function trackerSave() {
   try {
-    const { draft, ...data } = tracker;
+    const { draft, biteDraft, ...data } = tracker;
     localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(data));
   } catch (e) { /* private mode etc. — tracking still works, just not persisted */ }
 }
@@ -43,7 +52,10 @@ function trackerLoad() {
     if (Number.isInteger(data.prevailingWind)) tracker.prevailingWind = data.prevailingWind;
     if (Number.isInteger(data.dealerSeat)) tracker.dealerSeat = data.dealerSeat;
     if (Number.isInteger(data.handNumber)) tracker.handNumber = data.handNumber;
-    if (Array.isArray(data.history)) tracker.history = data.history;
+    if (Array.isArray(data.history)) {
+      // Migrate entries saved before bite support: hands lacked a kind field.
+      tracker.history = data.history.map(e => e.kind ? e : { ...e, kind: 'hand' });
+    }
   } catch (e) { /* corrupted storage — start fresh */ }
 }
 
@@ -56,6 +68,7 @@ function trackerLoad() {
 function trackerRecordHand() {
   const d = tracker.draft;
   const entry = {
+    kind: 'hand',
     hand: tracker.handNumber,
     wind: tracker.prevailingWind,
     dealerSeat: tracker.dealerSeat,
@@ -81,13 +94,35 @@ function trackerRecordHand() {
   trackerSave();
 }
 
-/** Undo the last recorded hand, restoring dealer/wind from the entry. */
+/**
+ * Record a bite (animal / open kong / hidden kong) during the current hand.
+ * Bites pay immediately from every other player and don't advance the deal.
+ */
+function trackerRecordBite() {
+  const b = tracker.biteDraft;
+  const type = TRACKER_BITE_TYPES.find(t => t.id === b.type);
+  if (b.player === null || !type) return;
+  tracker.history.push({
+    kind: 'bite',
+    hand: tracker.handNumber, // happens during this hand
+    wind: tracker.prevailingWind,
+    player: b.player,
+    type: type.id,
+    tai: type.tai,
+  });
+  tracker.biteDraft = { player: null, type: null };
+  trackerSave();
+}
+
+/** Undo the last entry. Bites only pop; hands also restore dealer/wind. */
 function trackerUndo() {
   const last = tracker.history.pop();
   if (!last) return;
-  tracker.handNumber = last.hand;
-  tracker.dealerSeat = last.dealerSeat;
-  tracker.prevailingWind = last.wind;
+  if (last.kind === 'hand') {
+    tracker.handNumber = last.hand;
+    tracker.dealerSeat = last.dealerSeat;
+    tracker.prevailingWind = last.wind;
+  }
   trackerSave();
 }
 
@@ -97,13 +132,19 @@ function trackerReset() {
   tracker.handNumber = 1;
   tracker.history = [];
   tracker.draft = { winner: null, tai: null, how: null, shooter: null };
+  tracker.biteDraft = { player: null, type: null };
   trackerSave();
 }
 
-/** Per-player totals: wins, total tai won, times they shot the winner. */
+/** Per-player totals: wins, tai won, times shot, self-draws, bites and bite tai. */
 function trackerTotals() {
-  const totals = tracker.players.map(() => ({ wins: 0, tai: 0, shot: 0, selfDraws: 0 }));
+  const totals = tracker.players.map(() => ({ wins: 0, tai: 0, shot: 0, selfDraws: 0, bites: 0, biteTai: 0 }));
   for (const e of tracker.history) {
+    if (e.kind === 'bite') {
+      totals[e.player].bites++;
+      totals[e.player].biteTai += e.tai;
+      continue;
+    }
     if (e.winner === null) continue;
     totals[e.winner].wins++;
     totals[e.winner].tai += e.tai || 0;

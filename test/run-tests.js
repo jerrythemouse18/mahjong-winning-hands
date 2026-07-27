@@ -402,6 +402,43 @@ console.log('game tracker:');
   // Reset.
   T('trackerReset()');
   check('reset clears everything', T('tracker.history.length + tracker.dealerSeat + tracker.prevailingWind + (tracker.handNumber - 1)'), 0);
+
+  // --- bites / kongs ---
+  T("tracker.biteDraft = { player: 2, type: 'hidden-kong' }");
+  T('trackerRecordBite()');
+  check('bite recorded with tai', T('tracker.history[0].tai'), 2);
+  check('bite tagged to current hand', T('tracker.history[0].hand'), 1);
+  check('bite does not advance the deal', T('tracker.dealerSeat + (tracker.handNumber - 1)'), 0);
+  check('bite draft cleared', T('tracker.biteDraft.player'), null);
+  T("tracker.biteDraft = { player: 2, type: 'animal' }");
+  T('trackerRecordBite()');
+  T("tracker.draft = { winner: 0, tai: 2, how: 'self-draw', shooter: null }");
+  T('trackerRecordHand()');
+  const bt = T('trackerTotals()');
+  check('bite totals accumulate', [bt[2].bites, bt[2].biteTai], [2, 3]);
+  check('bites separate from win totals', bt[2].wins, 0);
+  // Undo after a hand: pops the hand (restores deal), bites stay.
+  T('trackerUndo()');
+  check('undo pops hand not bites', T('tracker.history.length'), 2);
+  check('undo restored hand number', T('tracker.handNumber'), 1);
+  // Undo again: pops the latest bite without touching dealer/wind.
+  T("tracker.dealerSeat = 3");
+  T('trackerUndo()');
+  check('bite undo leaves dealer alone', T('tracker.dealerSeat'), 3);
+  check('bite undo pops the bite', T('tracker.history.length'), 1);
+  // Incomplete bite drafts are ignored.
+  T("tracker.biteDraft = { player: null, type: 'animal' }");
+  T('trackerRecordBite()');
+  check('incomplete bite ignored', T('tracker.history.length'), 1);
+  // Legacy entries without kind are migrated on load.
+  const legacyCtx = { console, localStorage: {
+    getItem: () => JSON.stringify({ players: ['A','B','C','D'], prevailingWind: 0, dealerSeat: 0, handNumber: 2,
+      history: [{ hand: 1, wind: 0, dealerSeat: 0, winner: 1, tai: 3, how: 'self-draw', shooter: null }] }),
+    setItem: () => {} } };
+  vm.createContext(legacyCtx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'tracker.js'), 'utf8'), legacyCtx, { filename: 'tracker.js' });
+  vm.runInContext('trackerLoad()', legacyCtx);
+  check('legacy history migrated to kind:hand', vm.runInContext("tracker.history[0].kind", legacyCtx), 'hand');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
