@@ -12,9 +12,40 @@
   <header>
     <h1>🀄 Singapore Mahjong Winning Hands</h1>
     <p>Tap tiles to build your hand — see how close you are to a win and which tile wins it.</p>
+    <nav id="app-tabs" class="app-tabs">
+      <button type="button" class="app-tab active" data-view="analyzer">🀄 Hand analyzer</button>
+      <button type="button" class="app-tab" data-view="tracker">📋 Game tracker</button>
+    </nav>
   </header>
 
-  <main>
+  <main id="view-tracker" class="app-view" hidden>
+    <section id="tracker-state-section">
+      <h2>Round</h2>
+      <div id="tracker-state" class="tracker-state"></div>
+      <div class="tracker-actions">
+        <button id="tracker-undo" type="button">↩ Undo last hand</button>
+        <button id="tracker-reset" type="button">Reset game</button>
+      </div>
+    </section>
+
+    <section id="tracker-players-section">
+      <h2>Players</h2>
+      <p class="hint">Tap a name to edit it. Seat 1 starts as East (dealer).</p>
+      <div id="tracker-players"></div>
+    </section>
+
+    <section id="tracker-record-section">
+      <h2>Record this hand</h2>
+      <div id="tracker-entry"></div>
+    </section>
+
+    <section id="tracker-history-section">
+      <h2>Hand history</h2>
+      <div id="tracker-history"></div>
+    </section>
+  </main>
+
+  <main id="view-analyzer" class="app-view">
     <section id="palette-section">
       <h2>1 · Pick your tiles</h2>
       <p class="hint">Tap a tile to add a copy (up to 4). The badge shows how many you hold. (If an opponent is selected in section 5, taps record their discards instead.)</p>
@@ -117,6 +148,8 @@
   <script src="js/suggestions.js"></script>
   <script src="js/safety.js"></script>
   <script src="js/scoring.js"></script>
+  <script src="js/tracker.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/tracker-ui.js"></script>
 </body>
 </html>
