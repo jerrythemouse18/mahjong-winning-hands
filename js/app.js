@@ -16,6 +16,7 @@ const state = {
   targetPattern: null, // pattern id the user chose to chase, or null for auto
   oppDiscards: [[], [], []], // recent discards per opponent, oldest first
   inputTarget: -1, // -1 = taps add to my hand; 0..2 = record that opponent's discard
+  assumeChow: true, // true = suji full weight (Ping Hu assumption); false = half
 };
 
 const els = {
@@ -595,29 +596,52 @@ function renderSafety() {
     }
     return;
   }
-  const ranked = safetyRanking(state.counts, state.oppDiscards);
+  const ranked = safetyRanking(state.counts, state.oppDiscards, state.assumeChow);
+
+  // Group by safety level
+  const groups = { safe: [], caution: [], risky: [] };
+  for (const r of ranked) groups[r.level].push(r);
+
   const box = document.createElement('div');
   box.className = 'safety-box';
   const h = document.createElement('h3');
-  h.textContent = '🛡️ Safer discards from your hand';
+  h.textContent = '🛡️ Discard safety ranking';
   box.appendChild(h);
-  for (const r of ranked) {
-    const row = document.createElement('div');
-    row.className = `safety-row ${r.level}`;
-    const btn = tileButton(r.tile, { onClick: removeTile });
-    btn.classList.add('mini');
-    btn.title = `Discard ${tileFace(r.tile).label}`;
-    row.appendChild(btn);
-    const info = document.createElement('div');
-    info.className = 'safety-info';
-    const levelText = { safe: 'Safe', caution: 'Caution', risky: 'Risky' }[r.level];
-    info.innerHTML = `<span class="safety-level">${levelText}</span> ${r.reasons.join('; ')}`;
-    row.appendChild(info);
-    box.appendChild(row);
+
+  for (const [level, label, icon] of [['safe', 'Safe', '✅'], ['caution', 'Caution', '⚠️'], ['risky', 'Risky', '🚫']]) {
+    if (!groups[level].length) continue;
+    const groupDiv = document.createElement('div');
+    groupDiv.className = `safety-group safety-group-${level}`;
+    const groupHead = document.createElement('div');
+    groupHead.className = 'safety-group-head';
+    groupHead.textContent = `${icon} ${label}`;
+    groupDiv.appendChild(groupHead);
+
+    for (const r of groups[level]) {
+      const row = document.createElement('div');
+      row.className = `safety-row ${r.level}`;
+      const btn = tileButton(r.tile, { onClick: removeTile });
+      btn.classList.add('mini');
+      btn.title = `Discard ${tileFace(r.tile).label}`;
+      row.appendChild(btn);
+      const info = document.createElement('div');
+      info.className = 'safety-info';
+      const reasonTexts = r.reasons.map(reason => {
+        const typeClass = `reason-${reason.type}`;
+        return `<span class="safety-reason ${typeClass}">${reason.text}</span>`;
+      });
+      info.innerHTML = `<span class="safety-score">${r.score} pts</span> ${reasonTexts.join('<br>')}`;
+      row.appendChild(info);
+      groupDiv.appendChild(row);
+    }
+    box.appendChild(groupDiv);
   }
+
   const hint = document.createElement('p');
   hint.className = 'hint';
-  hint.textContent = 'Heuristic only — tiles an opponent already discarded are the safest; fresh honors are the most dangerous. Tap a tile to discard it.';
+  hint.textContent = state.assumeChow
+    ? 'Suji (筋) at full weight — assumes opponents are building chow/run hands. Switch to Mixed mode for pung-heavy tables.'
+    : 'Mixed mode — suji at half weight (opponents may be collecting triplets). Switch to Chow mode for run-based tables.';
   box.appendChild(hint);
   els.safetyResults.appendChild(box);
 }
@@ -708,4 +732,13 @@ buildOpponentTabs();
 buildDiscardPalette();
 buildLearn();
 els.clearBtn.addEventListener('click', clearHand);
+
+// Safety mode toggle
+document.querySelectorAll('input[name="safety-mode"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    state.assumeChow = radio.value === 'chow';
+    update();
+  });
+});
+
 update();
