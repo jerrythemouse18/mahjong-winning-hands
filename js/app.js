@@ -349,6 +349,7 @@ function update() {
   }
 
   renderSuggestions();
+  renderLearnDiscardAdvice();
 }
 
 function setStatus(msg, cls) {
@@ -429,6 +430,10 @@ function renderDiscardAdvice() {
 
 function renderSuggestions() {
   els.suggestions.innerHTML = '';
+  // Sync learn section checkboxes with targetPattern
+  els.learnList.querySelectorAll('.learn-chase-cb').forEach(cb => {
+    cb.checked = cb.dataset.pattern === state.targetPattern;
+  });
   const n = totalTiles();
   if (n < 5) {
     els.suggestions.innerHTML = '<p class="hint">Add at least 5 tiles to get pattern suggestions.</p>';
@@ -623,16 +628,75 @@ function buildLearn() {
   for (const p of [...PATTERNS].sort((a, b) => a.difficulty - b.difficulty)) {
     const card = document.createElement('div');
     card.className = 'learn-card';
+    card.dataset.patternId = p.id;
     const stars = '★'.repeat(p.difficulty) + '☆'.repeat(5 - p.difficulty);
     card.innerHTML = `
-      <div class="learn-head"><strong>${p.name}</strong><span class="tai-badge">${p.tai} tai</span><span class="stars" title="Difficulty">${stars}</span></div>
+      <div class="learn-head">
+        <label class="learn-chase-label"><input type="checkbox" class="learn-chase-cb" data-pattern="${p.id}"> Chase</label>
+        <strong>${p.name}</strong><span class="tai-badge">${p.tai} tai</span><span class="stars" title="Difficulty">${stars}</span>
+      </div>
       <p>${p.description}</p>
-      <div class="learn-example"></div>`;
+      <div class="learn-example"></div>
+      <div class="learn-discard-advice"></div>`;
     const exampleRow = card.querySelector('.learn-example');
     const ids = parseHand(p.example.replace(/\+.*$/, ''));
     for (const id of ids) exampleRow.appendChild(tileButton(id, {}));
+    card.querySelector('.learn-chase-cb').addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      // Uncheck all others (radio-like behavior)
+      els.learnList.querySelectorAll('.learn-chase-cb').forEach(cb => {
+        if (cb !== e.target) cb.checked = false;
+      });
+      state.targetPattern = checked ? p.id : null;
+      update();
+    });
     els.learnList.appendChild(card);
   }
+}
+
+function renderLearnDiscardAdvice() {
+  const n = totalTiles();
+  els.learnList.querySelectorAll('.learn-card').forEach(card => {
+    const adviceEl = card.querySelector('.learn-discard-advice');
+    adviceEl.innerHTML = '';
+    const cb = card.querySelector('.learn-chase-cb');
+    if (!cb.checked) return;
+    if (n === 0) {
+      adviceEl.innerHTML = '<p class="hint">Add tiles to your hand to get discard suggestions.</p>';
+      return;
+    }
+    const patternId = cb.dataset.pattern;
+    const fn = PATTERN_DISTANCE[patternId];
+    if (!fn) {
+      adviceEl.innerHTML = '<p class="hint">No distance heuristic available for this pattern.</p>';
+      return;
+    }
+    const distance = fn(state.counts.slice());
+    if (distance <= 0) {
+      adviceEl.innerHTML = '<p class="hint chase-complete">✅ Your hand already matches this pattern!</p>';
+      return;
+    }
+    const distLabel = distance === 1 ? '1 tile away' : `${distance} tiles away`;
+    if (n < 14) {
+      adviceEl.innerHTML = `<p class="hint">You are ~${distLabel} from this pattern. Fill your hand to 14 tiles to see discard suggestions.</p>`;
+      return;
+    }
+    const throwTiles = bestDiscardsForPattern(state.counts, patternId, 5);
+    if (!throwTiles.length) {
+      adviceEl.innerHTML = `<p class="hint">~${distLabel}. No clear discard found to get closer.</p>`;
+      return;
+    }
+    const box = document.createElement('div');
+    box.className = 'learn-advice-box';
+    box.innerHTML = `<span class="learn-advice-label">~${distLabel} — discard:</span>`;
+    for (const t of throwTiles) {
+      const btn = tileButton(t, { onClick: removeTile });
+      btn.classList.add('mini');
+      btn.title = `Discard ${tileFace(t).label}`;
+      box.appendChild(btn);
+    }
+    adviceEl.appendChild(box);
+  });
 }
 
 /* ---------- init ---------- */

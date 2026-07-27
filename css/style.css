@@ -427,3 +427,47 @@ footer {
 #discard-palette .tile-sub {
   font-size: 0.65rem;
 }
+
+/* Learn section chase checkbox & discard advice */
+.learn-chase-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent, #4ade80);
+  cursor: pointer;
+  margin-right: 8px;
+}
+.learn-chase-cb {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent, #4ade80);
+}
+.learn-card:has(.learn-chase-cb:checked) {
+  border-color: var(--accent, #4ade80);
+  box-shadow: 0 0 0 1px var(--accent, #4ade80);
+}
+.learn-discard-advice {
+  margin-top: 8px;
+}
+.learn-advice-box {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--panel-2, #1f2937);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent, #4ade80);
+}
+.learn-advice-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted, #9ca3af);
+}
+.chase-complete {
+  color: var(--accent, #4ade80) !important;
+  font-weight: 600;
+}
