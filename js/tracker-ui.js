@@ -294,29 +294,36 @@ function renderTrackerHistory() {
     tEls.history.innerHTML = '<p class="hint">No hands recorded yet. Fill in the details above and tap Record.</p>';
     return;
   }
+  const s = tracker.stakes;
+  const stakeTable = trackerStakeTable();
   const table = document.createElement('table');
   table.className = 'history-table';
-  table.innerHTML = '<thead><tr><th>#</th><th>Wind</th><th>Winner</th><th>Tai</th><th>How</th></tr></thead>';
+  table.innerHTML = '<thead><tr><th>#</th><th>Wind</th><th>Winner</th><th>Tai</th><th>$</th><th>How</th></tr></thead>';
   const tbody = document.createElement('tbody');
   for (const e of [...tracker.history].reverse()) {
     const tr = document.createElement('tr');
     const windChar = TRACKER_WINDS[e.wind].split(' ')[1];
     if (e.kind === 'bite') {
       const type = TRACKER_BITE_TYPES.find(t => t.id === e.type);
+      const collect = payoutAmounts(e.tai, s.stake, 'half', 0, stakeTable).nonShooter * 3;
       tr.className = 'history-bite';
       tr.innerHTML = `<td>${e.hand}</td><td>${windChar}</td>` +
-        `<td>${tracker.players[e.player]}</td><td>${e.tai}</td><td>💰 ${type ? type.label : e.type}</td>`;
+        `<td>${tracker.players[e.player]}</td><td>${e.tai}</td>` +
+        `<td class="history-money">${fmtMoney(collect)}</td><td>💰 ${type ? type.label : e.type}</td>`;
       tbody.appendChild(tr);
       continue;
     }
     if (e.winner === null) {
-      tr.innerHTML = `<td>${e.hand}</td><td>${windChar}</td><td colspan="3" class="history-draw">Draw 流局</td>`;
+      tr.innerHTML = `<td>${e.hand}</td><td>${windChar}</td><td colspan="4" class="history-draw">Draw 流局</td>`;
     } else {
+      const p = payoutAmounts(e.tai, s.stake, s.payMode, s.selfDrawBonus, stakeTable);
+      const collect = e.how === 'self-draw' ? p.selfDrawTotal : p.total;
       const how = e.how === 'self-draw'
         ? 'Self-draw 自摸'
         : `off ${tracker.players[e.shooter]}`;
       tr.innerHTML = `<td>${e.hand}</td><td>${windChar}</td>` +
-        `<td>${tracker.players[e.winner]}</td><td>${e.tai}</td><td>${how}</td>`;
+        `<td>${tracker.players[e.winner]}</td><td>${e.tai}</td>` +
+        `<td class="history-money">${fmtMoney(collect)}</td><td>${how}</td>`;
     }
     tbody.appendChild(tr);
   }
