@@ -478,6 +478,38 @@ console.log('game tracker:');
   T('trackerRecordHand()');
   check('draw moves no money', T('trackerMoney()'), [-4, 4, 0, 0]);
 
+  // --- settlement ---
+  check('settle: single debtor/creditor', T('JSON.stringify(settleDebts([4, -4, 0, 0]))'),
+    JSON.stringify([{ from: 1, to: 0, amount: 4 }]));
+  check('settle: all even → no transfers', T('settleDebts([0, 0, 0, 0]).length'), 0);
+  {
+    const transfers = T('settleDebts([6, -2, -3, -1])');
+    const net = [0, 0, 0, 0];
+    for (const t of transfers) { net[t.from] -= t.amount; net[t.to] += t.amount; }
+    check('settle: 3-way transfers reproduce net', net, [6, -2, -3, -1]);
+    check('settle: at most 3 transfers', transfers.length <= 3, true);
+  }
+  {
+    const transfers = T('settleDebts([0.1, 0.1, 0.1, -0.3])');
+    const total = transfers.reduce((a, t) => a + t.amount, 0);
+    check('settle: cents handled without drift', Math.round(total * 100), 30);
+  }
+  // Summary over a real game.
+  T('trackerReset()');
+  T("tracker.stakes = { stake: 1.00, stakeTableId: null, payMode: 'half', selfDrawBonus: 0 }");
+  T("tracker.draft = { winner: 0, tai: 1, how: 'discard', shooter: 1 }");
+  T('trackerRecordHand()');
+  T("tracker.draft = { winner: 0, tai: 3, how: 'self-draw', shooter: null }");
+  T('trackerRecordHand()');
+  {
+    const sum = T('trackerSummary()');
+    check('summary standings sorted by net', sum.standings[0].seat, 0);
+    check('summary biggest hand is the self-draw', sum.biggestHand.tai, 3);
+    const text = T('trackerSummaryText()');
+    check('summary text has standings and transfers',
+      text.includes('1. Player 1') && text.includes('pays'), true);
+  }
+
   // Legacy entries without kind are migrated on load.
   const legacyCtx = { console, localStorage: {
     getItem: () => JSON.stringify({ players: ['A','B','C','D'], prevailingWind: 0, dealerSeat: 0, handNumber: 2,

@@ -203,6 +203,81 @@ function trackerMoney() {
   return net;
 }
 
+/**
+ * Who-pays-whom settlement: turn net positions into a minimal transfer list.
+ * Greedy largest-debtor → largest-creditor matching; for 4 players this
+ * yields at most 3 transfers. Works in integer cents to dodge float drift.
+ * Returns [{ from, to, amount }] (player indices, dollars).
+ */
+function settleDebts(net) {
+  const cents = net.map(x => Math.round(x * 100));
+  // Force zero-sum after rounding by dumping any remainder on the largest position.
+  const drift = cents.reduce((a, b) => a + b, 0);
+  if (drift !== 0) {
+    const iMax = cents.reduce((best, x, i) => Math.abs(x) > Math.abs(cents[best]) ? i : best, 0);
+    cents[iMax] -= drift;
+  }
+  const transfers = [];
+  for (;;) {
+    let debtor = 0, creditor = 0;
+    for (let i = 1; i < cents.length; i++) {
+      if (cents[i] < cents[debtor]) debtor = i;
+      if (cents[i] > cents[creditor]) creditor = i;
+    }
+    if (cents[creditor] <= 0 || cents[debtor] >= 0) break;
+    const amount = Math.min(-cents[debtor], cents[creditor]);
+    cents[debtor] += amount;
+    cents[creditor] -= amount;
+    transfers.push({ from: debtor, to: creditor, amount: amount / 100 });
+  }
+  return transfers;
+}
+
+/** Game summary: standings, transfers, and highlight stats. */
+function trackerSummary() {
+  const s = tracker.stakes;
+  const table = trackerStakeTable();
+  const net = trackerMoney();
+  const totals = trackerTotals();
+  const standings = tracker.players
+    .map((name, i) => ({ seat: i, name, net: net[i], ...totals[i] }))
+    .sort((a, b) => b.net - a.net);
+  const transfers = settleDebts(net);
+
+  let biggestHand = null;
+  for (const e of tracker.history) {
+    if (e.kind !== 'hand' || e.winner === null) continue;
+    const p = payoutAmounts(e.tai, s.stake, s.payMode, s.selfDrawBonus, table);
+    const collect = e.how === 'self-draw' ? p.selfDrawTotal : p.total;
+    if (!biggestHand || collect > biggestHand.collect) {
+      biggestHand = { winner: e.winner, tai: e.tai, collect, hand: e.hand };
+    }
+  }
+  return { standings, transfers, biggestHand };
+}
+
+/** Plain-text summary for sharing (WhatsApp etc.). */
+function trackerSummaryText() {
+  const { standings, transfers, biggestHand } = trackerSummary();
+  const lines = ['🀄 Mahjong session results', ''];
+  standings.forEach((p, rank) => {
+    const sign = p.net > 0 ? '+' : '';
+    lines.push(`${rank + 1}. ${p.name}: ${sign}${fmtMoney(p.net).replace('$-', '-$')} (${p.wins} wins, ${p.tai} tai)`);
+  });
+  if (transfers.length) {
+    lines.push('', 'To settle:');
+    for (const t of transfers) {
+      lines.push(`${tracker.players[t.from]} pays ${tracker.players[t.to]} ${fmtMoney(t.amount)}`);
+    }
+  } else {
+    lines.push('', 'All even — nothing to settle!');
+  }
+  if (biggestHand) {
+    lines.push('', `Biggest hand: ${tracker.players[biggestHand.winner]} — ${biggestHand.tai} tai (${fmtMoney(biggestHand.collect)}) on hand #${biggestHand.hand}`);
+  }
+  return lines.join('\n');
+}
+
 /** Is the draft complete enough to record? */
 function trackerDraftReady() {
   const d = tracker.draft;

@@ -18,7 +18,10 @@ const tEls = {
   entry: document.getElementById('tracker-entry'),
   history: document.getElementById('tracker-history'),
   undo: document.getElementById('tracker-undo'),
+  finish: document.getElementById('tracker-finish'),
   reset: document.getElementById('tracker-reset'),
+  settlementSection: document.getElementById('tracker-settlement-section'),
+  settlement: document.getElementById('tracker-settlement'),
 };
 
 /* ---------- tab switching ---------- */
@@ -323,6 +326,75 @@ function renderTrackerHistory() {
   tEls.history.appendChild(table);
 }
 
+/* ---------- settlement ---------- */
+
+let settlementVisible = false;
+
+function renderSettlement() {
+  tEls.settlementSection.hidden = !settlementVisible;
+  if (!settlementVisible) return;
+  tEls.settlement.innerHTML = '';
+  const { standings, transfers, biggestHand } = trackerSummary();
+
+  const table = document.createElement('table');
+  table.className = 'history-table';
+  table.innerHTML = '<thead><tr><th>#</th><th>Player</th><th>Net</th><th>Wins</th><th>Tai</th><th>Shot</th></tr></thead>';
+  const tbody = document.createElement('tbody');
+  standings.forEach((p, rank) => {
+    const tr = document.createElement('tr');
+    const cls = p.net > 0.005 ? 'winning' : p.net < -0.005 ? 'losing' : 'even';
+    const sign = p.net > 0 ? '+' : '';
+    tr.innerHTML = `<td>${rank + 1}</td><td>${p.name}</td>` +
+      `<td class="settle-net ${cls}">${sign}${fmtMoney(p.net).replace('$-', '-$')}</td>` +
+      `<td>${p.wins}</td><td>${p.tai}</td><td>${p.shot}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  tEls.settlement.appendChild(table);
+
+  const pay = document.createElement('div');
+  pay.className = 'settle-transfers';
+  if (transfers.length) {
+    pay.innerHTML = '<h3>To settle up:</h3>' + transfers.map(t =>
+      `<p class="settle-line">💸 <strong>${tracker.players[t.from]}</strong> pays <strong>${tracker.players[t.to]}</strong> ${fmtMoney(t.amount)}</p>`).join('');
+  } else {
+    pay.innerHTML = '<p class="hint">All even — nothing to settle!</p>';
+  }
+  tEls.settlement.appendChild(pay);
+
+  if (biggestHand) {
+    const stat = document.createElement('p');
+    stat.className = 'settle-stat';
+    stat.textContent = `🏆 Biggest hand: ${tracker.players[biggestHand.winner]} — ${biggestHand.tai} tai (${fmtMoney(biggestHand.collect)}) on hand #${biggestHand.hand}`;
+    tEls.settlement.appendChild(stat);
+  }
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'record-btn settle-copy';
+  copyBtn.textContent = '📋 Copy summary';
+  copyBtn.addEventListener('click', () => {
+    const text = trackerSummaryText();
+    const done = () => { copyBtn.textContent = '✅ Copied!'; setTimeout(() => { copyBtn.textContent = '📋 Copy summary'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else {
+      fallbackCopy(text, done);
+    }
+  });
+  tEls.settlement.appendChild(copyBtn);
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* best effort */ }
+  document.body.removeChild(ta);
+  done();
+}
+
 /* ---------- init ---------- */
 
 function renderTracker() {
@@ -331,10 +403,16 @@ function renderTracker() {
   renderTrackerPlayers();
   renderTrackerBite();
   renderTrackerEntry();
+  renderSettlement();
   renderTrackerHistory();
 }
 
 tEls.undo.addEventListener('click', () => { trackerUndo(); renderTracker(); });
+tEls.finish.addEventListener('click', () => {
+  settlementVisible = !settlementVisible;
+  tEls.finish.textContent = settlementVisible ? '🏁 Hide settlement' : '🏁 Finish game';
+  renderTracker();
+});
 tEls.reset.addEventListener('click', () => {
   if (confirm('Reset the whole game? History will be cleared.')) {
     trackerReset();
