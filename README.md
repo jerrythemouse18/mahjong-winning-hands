@@ -108,6 +108,7 @@ The badge in the app's top-right corner shows the deployed version (`APP_VERSION
 - **Kong support** — declare four-of-a-kind melds alongside your hand; each kong counts as a set (hand shrinks to 11/8/5/2 tiles), kongs feed pattern/tai detection (dragon and wind kongs, Pong Pong, flushes), and four kongs form **Eighteen Arhats (十八羅漢)**, a limit hand.
 - **Game-end settlement** — a Finish-game view in the tracker: final standings by net money, a who-pays-whom transfer list (at most 3 transfers), biggest-hand highlight, and a copy-to-clipboard summary for the group chat.
 - **Practice tab** — two drills with streak tracking: "What are you waiting on?" (deal a random ready hand, name every winning tile) and "Best discard" (pick the throw the advisor rates highest, graded full/decent/poor).
+- **Tab integration** — a winning hand in the analyzer has a "Record this win in the game tracker" button (prefills tai and self-draw/discard; you pick the player); recording or undoing hands in the tracker keeps the analyzer's prevailing wind in sync; the tracker can import the analyzer's stakes with one tap.
 
 ## Current limitations
 

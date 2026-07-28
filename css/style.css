@@ -502,6 +502,10 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .history-draw { color: var(--warn); font-style: italic; }
 .history-money { color: var(--accent); font-weight: 600; white-space: nowrap; }
 
+/* ---------- tab integration ---------- */
+.send-to-tracker { margin-top: 12px; }
+.import-stakes { color: #7dd3fc; }
+
 /* ---------- practice ---------- */
 .selected-tile { outline: 3px solid var(--accent); outline-offset: 1px; }
 .reveal-hit { outline: 3px solid var(--accent); outline-offset: 1px; }

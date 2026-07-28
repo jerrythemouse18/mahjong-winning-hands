@@ -27,14 +27,16 @@ const tEls = {
 
 /* ---------- tab switching ---------- */
 
+function switchAppTab(view) {
+  tEls.tabs.querySelectorAll('.app-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === view));
+  for (const [v, el] of Object.entries(tEls.views)) {
+    el.hidden = v !== view;
+  }
+}
+
 tEls.tabs.querySelectorAll('.app-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    tEls.tabs.querySelectorAll('.app-tab').forEach(b =>
-      b.classList.toggle('active', b === btn));
-    for (const [view, el] of Object.entries(tEls.views)) {
-      el.hidden = view !== btn.dataset.view;
-    }
-  });
+  btn.addEventListener('click', () => switchAppTab(btn.dataset.view));
 });
 
 /* ---------- round state ---------- */
@@ -78,6 +80,21 @@ function renderTrackerStakes() {
     presets.appendChild(btn);
   }
   tEls.stakes.appendChild(presets);
+
+  const importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.className = 'stake-btn import-stakes';
+  importBtn.textContent = '⇐ Use analyzer stakes';
+  importBtn.title = 'Copy the stake, payment mode, and self-draw bonus set in the Hand analyzer tab';
+  importBtn.addEventListener('click', () => {
+    if (typeof state === 'undefined') return;
+    s.stake = state.stake;
+    s.stakeTableId = state.stakeTable ? state.stakeTable.id : null;
+    s.payMode = state.payMode;
+    s.selfDrawBonus = state.selfDrawBonus;
+    trackerSave(); renderTracker();
+  });
+  tEls.stakes.appendChild(importBtn);
 
   const bonusLabel = document.createElement('label');
   bonusLabel.className = 'custom-stake';
@@ -277,7 +294,11 @@ function renderTrackerEntry() {
   recordBtn.className = 'record-btn';
   recordBtn.textContent = d.how === 'draw' ? 'Record drawn hand' : '✔ Record hand';
   recordBtn.disabled = !trackerDraftReady();
-  recordBtn.addEventListener('click', () => { trackerRecordHand(); renderTracker(); });
+  recordBtn.addEventListener('click', () => {
+    trackerRecordHand();
+    syncWindToAnalyzer();
+    renderTracker();
+  });
   actions.appendChild(recordBtn);
   tEls.entry.appendChild(actions);
 }
@@ -325,6 +346,17 @@ function renderTrackerHistory() {
   }
   table.appendChild(tbody);
   tEls.history.appendChild(table);
+}
+
+/* ---------- analyzer integration ---------- */
+
+/** Keep the analyzer's prevailing-wind setting in step with the game. */
+function syncWindToAnalyzer() {
+  if (typeof state === 'undefined') return;
+  state.roundWind = tracker.prevailingWind;
+  const select = document.getElementById('round-wind');
+  if (select) select.value = String(tracker.prevailingWind);
+  if (typeof update === 'function') update();
 }
 
 /* ---------- settlement ---------- */
@@ -408,7 +440,7 @@ function renderTracker() {
   renderTrackerHistory();
 }
 
-tEls.undo.addEventListener('click', () => { trackerUndo(); renderTracker(); });
+tEls.undo.addEventListener('click', () => { trackerUndo(); syncWindToAnalyzer(); renderTracker(); });
 tEls.finish.addEventListener('click', () => {
   settlementVisible = !settlementVisible;
   tEls.finish.textContent = settlementVisible ? '🏁 Hide settlement' : '🏁 Finish game';

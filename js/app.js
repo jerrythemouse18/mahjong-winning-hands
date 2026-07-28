@@ -500,6 +500,22 @@ function renderScoreBreakdown(score) {
       </tfoot>
     </table>
     <p class="payout">${describePayout(score.total, selfDraw, state.stake, state.payMode, state.selfDrawBonus, state.stakeTable)}</p>`;
+  const sendBtn = document.createElement('button');
+  sendBtn.type = 'button';
+  sendBtn.className = 'record-btn send-to-tracker';
+  sendBtn.textContent = '📋 Record this win in the game tracker';
+  sendBtn.addEventListener('click', () => {
+    // Prefill what the analyzer knows; the user picks who at the table won.
+    tracker.draft = {
+      winner: null,
+      tai: Math.min(score.total, ((typeof state !== 'undefined' && state.taiLimit) || 5)),
+      how: selfDraw ? 'self-draw' : 'discard',
+      shooter: null,
+    };
+    switchAppTab('tracker');
+    renderTracker();
+  });
+  box.appendChild(sendBtn);
   els.scoreBreakdown.appendChild(box);
 }
 
