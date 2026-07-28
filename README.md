@@ -114,11 +114,10 @@ The badge in the app's top-right corner shows the deployed version (`APP_VERSION
 
 ## Roadmap / possible future features
 
+- **PWA / offline support** — manifest + service worker so the app installs to a phone home screen and works with no signal at the table. The app is fully static, so this is cheap to add.
+- **Shareable hand links** — encode a hand in the URL so players can send "look at this hand" links to friends.
 - **Rule-style switcher** — let the user choose which country's rules to play under (Singapore, Hong Kong, Taiwanese, Riichi/Japanese, MCR/Chinese official). Each style changes the valid special hands (e.g. Seven Pairs), the scoring system, and the pattern list. The engine is already structured so `patterns.js` can be swapped per rule set.
-- Kong support (four-of-a-kind sets and their bonus tai).
-- Practice/quiz mode — deal a random hand and quiz the player on waits and best discards.
-- Shareable hand links (encode the hand in the URL).
-- PWA/offline support for use at the table.
+- **Deeper tab integration** — beyond the current send-to-tracker/wind-sync/stakes-import: a fully shared stakes store and per-seat hand attribution.
 
 ## License
 
