@@ -59,6 +59,44 @@ check('suggestions ranked', ctx.suggestPatterns(counts('123m 555m 789m EE'))[0].
 const sugg = ctx.suggestPatterns(counts('111m 222m 333m EE'));
 check('flush suggested for one-suit hand', sugg.slice(0, 3).some(s => s.pattern.id.includes('flush')), true);
 
+console.log('kong support:');
+{
+  const K = s => ctx.parseHand(s);
+  // 1 kong + 3 sets + pair from 11 tiles = win.
+  const c1 = counts('123m 456p 789s 55m');
+  const a1 = ctx.analyzeWin(c1, K('C'));
+  check('win with one kong', a1.win, true);
+  check('kong folded into decomposition', a1.decomposition.sets.length, 4);
+  // Same 11 tiles without the kong are not a win.
+  check('11 tiles alone not a win', ctx.analyzeWin(c1).win, false);
+  // Wrong tile count with kong rejected.
+  check('14 tiles + kong rejected', ctx.analyzeWin(counts('123m 456p 789s 234s 55m'), K('C')).win, false);
+  // Dragon kong scores dragon pung tai.
+  const s1 = ctx.scoreHand(a1, c1, { seatWind: 1, roundWind: 1, bonusTiles: new Set(), winContext: new Set() });
+  check('dragon kong earns dragon pung tai', s1.items.some(i => i.name.includes('Dragon pung')), true);
+  // Pong pong with a kong: kong counts as a pung.
+  const c2 = counts('111m 555p EEE 33s');
+  const a2 = ctx.analyzeWin(c2, K('N'));
+  check('pong pong with kong detected',
+    ctx.matchPatterns(a2, c2).some(p => p.id === 'pong-pong'), true);
+  // Full flush not broken by same-suit kong.
+  const c3 = counts('123m 345m 789m 99m');
+  const a3 = ctx.analyzeWin(c3, K('6m').slice(0, 1));
+  check('flush with same-suit kong', ctx.matchPatterns(a3, c3).some(p => p.id === 'full-flush'), true);
+  // Eighteen Arhats: 4 kongs + pair.
+  const c4 = counts('55m');
+  const a4 = ctx.analyzeWin(c4, K('CFPE'));
+  check('eighteen arhats detected', ctx.matchPatterns(a4, c4).some(p => p.id === 'eighteen-arhats'), true);
+  const s4 = ctx.scoreHand(a4, c4, { seatWind: 1, roundWind: 1, bonusTiles: new Set(), winContext: new Set(), taiLimit: 8 });
+  check('eighteen arhats scores custom limit', s4.total, 8);
+  // Waits with a kong: 10 tiles waiting.
+  const c5 = counts('123m 456p 789s 5m');
+  check('waits with kong', ctx.findWaits(c5, K('C')).map(ctx.tileNotation), ['5m']);
+  // Thirteen wonders can't have kongs.
+  const c6 = counts('19m 19p 19s ESWN CF');
+  check('13 wonders invalid with kong', ctx.analyzeWin(c6, K('P')).win, false);
+}
+
 console.log('discard advisor:');
 {
   // 14 tiles, one obvious floater: lone E among 3 chows + 2-3s partial + 5m pair.

@@ -50,6 +50,13 @@ const WIND_NAMES = ['East 東', 'South 南', 'West 西', 'North 北'];
 function scoreHand(analysis, counts, ctx) {
   const items = [];
 
+  // Kong tiles live outside `counts`; fold them in as pungs for the
+  // dragon/wind pung checks below (matchPatterns does its own folding).
+  if (analysis.kongs && analysis.kongs.length) {
+    counts = counts.slice();
+    for (const t of analysis.kongs) counts[t] += 3;
+  }
+
   // 1. Hand patterns (chicken hand contributes its 0 so the breakdown shows it).
   //    Dragon pungs are scored per-pung below, and Little/Big Three Dragons
   //    already include their pungs' value — so skip the generic pattern here.

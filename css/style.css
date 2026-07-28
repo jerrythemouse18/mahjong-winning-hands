@@ -502,6 +502,22 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .history-draw { color: var(--warn); font-style: italic; }
 .history-money { color: var(--accent); font-weight: 600; white-space: nowrap; }
 
+/* ---------- kongs ---------- */
+.kong-row { min-height: 0; }
+.kong-row:empty::after {
+  content: 'No kongs declared.';
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.kong-meld {
+  display: flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 6px;
+  border: 1px solid #c9a76a;
+}
+
 /* ---------- settlement ---------- */
 .settle-net.winning { color: var(--accent); font-weight: 700; }
 .settle-net.losing { color: #f87171; font-weight: 700; }

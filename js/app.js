@@ -14,6 +14,7 @@ const state = {
   payMode: 'half',
   selfDrawBonus: 0,
   targetPattern: null, // pattern id the user chose to chase, or null for auto
+  kongs: [], // declared kongs (tile ids); each consumes all 4 copies, outside counts
   oppDiscards: [[], [], []], // recent discards per opponent, oldest first
   oppTai: [0, 0, 0], // visible tai outside per opponent (from exposed melds)
   inputTarget: -1, // -1 = taps add to my hand; 0..2 = record that opponent's discard
@@ -30,6 +31,8 @@ const els = {
   discardAdvice: document.getElementById('discard-advice'),
   suggestions: document.getElementById('suggestions'),
   clearBtn: document.getElementById('clear-btn'),
+  kongRow: document.getElementById('kong-row'),
+  kongPalette: document.getElementById('kong-palette'),
   learnList: document.getElementById('learn-list'),
   seatWind: document.getElementById('seat-wind'),
   roundWind: document.getElementById('round-wind'),
@@ -50,6 +53,16 @@ const els = {
 
 function totalTiles() {
   return state.counts.reduce((a, b) => a + b, 0);
+}
+
+/** Max in-hand tiles given declared kongs: each kong replaces 3 of them. */
+function handTarget() {
+  return 14 - 3 * state.kongs.length;
+}
+
+/** Copies of a tile unavailable because of kongs (a kong uses all 4). */
+function kongCopies(id) {
+  return state.kongs.includes(id) ? 4 : 0;
 }
 
 /* ---------- rendering ---------- */
@@ -103,7 +116,7 @@ function refreshPaletteBadges() {
     const badge = btn.querySelector('.tile-badge');
     badge.textContent = n || '';
     badge.classList.toggle('visible', n > 0);
-    btn.classList.toggle('maxed', n >= 4);
+    btn.classList.toggle('maxed', n + kongCopies(id) >= 4);
   });
 }
 
@@ -115,8 +128,10 @@ function renderHand() {
     }
   }
   const n = totalTiles();
-  els.handCount.textContent = `${n} / 14 tiles`;
-  els.handCount.classList.toggle('complete', n === 13 || n === 14);
+  const target = handTarget();
+  const kongNote = state.kongs.length ? ` (+${state.kongs.length} kong${state.kongs.length > 1 ? 's' : ''})` : '';
+  els.handCount.textContent = `${n} / ${target} tiles${kongNote}`;
+  els.handCount.classList.toggle('complete', n === target - 1 || n === target);
 }
 
 /* ---------- interactions ---------- */
@@ -124,7 +139,7 @@ function renderHand() {
 function addTile(id) {
   // When an opponent tab is selected, palette taps record their discard.
   if (state.inputTarget >= 0) {
-    const seen = state.oppDiscards.flat().filter(t => t === id).length + state.counts[id];
+    const seen = state.oppDiscards.flat().filter(t => t === id).length + state.counts[id] + kongCopies(id);
     if (seen >= 4) return;                 // only 4 copies exist anywhere
     const list = state.oppDiscards[state.inputTarget];
     list.push(id);
@@ -132,10 +147,71 @@ function addTile(id) {
     update();
     return;
   }
-  if (state.counts[id] >= 4) return;       // only 4 copies exist
-  if (totalTiles() >= 14) return;          // hand is full
+  if (state.counts[id] + kongCopies(id) >= 4) return; // only 4 copies exist
+  if (totalTiles() >= handTarget()) return;           // hand is full
   state.counts[id]++;
   update();
+}
+
+/* ---------- kongs ---------- */
+
+function declareKong(id) {
+  if (state.kongs.length >= 4) return;
+  if (state.kongs.includes(id)) return;
+  // A kong needs all 4 copies free: none may sit in opponents' discards.
+  const inDiscards = state.oppDiscards.flat().filter(t => t === id).length;
+  if (inDiscards > 0) return;
+  // Absorb any copies currently in the hand into the meld.
+  state.counts[id] = 0;
+  state.kongs.push(id);
+  // Hand may now exceed the reduced target; trim is the user's call —
+  // but tiles beyond the target block analysis, so surface via counter.
+  update();
+}
+
+function removeKong(id) {
+  const i = state.kongs.indexOf(id);
+  if (i < 0) return;
+  state.kongs.splice(i, 1);
+  update();
+}
+
+function buildKongPalette() {
+  const groups = [
+    [...Array(9)].map((_, i) => i),
+    [...Array(9)].map((_, i) => 9 + i),
+    [...Array(9)].map((_, i) => 18 + i),
+    [27, 28, 29, 30, 31, 32, 33],
+  ];
+  for (const ids of groups) {
+    for (const id of ids) {
+      const btn = tileButton(id, { onClick: declareKong });
+      btn.classList.add('mini');
+      btn.dataset.kongTileId = id;
+      els.kongPalette.appendChild(btn);
+    }
+  }
+}
+
+function renderKongs() {
+  els.kongRow.innerHTML = '';
+  for (const id of state.kongs) {
+    const group = document.createElement('div');
+    group.className = 'kong-meld';
+    for (let k = 0; k < 4; k++) {
+      const btn = tileButton(id, { onClick: removeKong });
+      btn.classList.add('mini');
+      btn.title = 'Tap to remove this kong';
+      group.appendChild(btn);
+    }
+    els.kongRow.appendChild(group);
+  }
+  els.kongPalette.querySelectorAll('.tile').forEach(btn => {
+    const id = Number(btn.dataset.kongTileId);
+    const blocked = state.kongs.includes(id) || state.kongs.length >= 4 ||
+      state.oppDiscards.flat().includes(id);
+    btn.classList.toggle('maxed', blocked);
+  });
 }
 
 function removeTile(id) {
@@ -146,6 +222,7 @@ function removeTile(id) {
 
 function clearHand() {
   state.counts.fill(0);
+  state.kongs = [];
   state.bonusTiles.clear();
   state.winContext.clear();
   state.oppDiscards = [[], [], []];
@@ -334,6 +411,7 @@ function renderPayoutTable() {
 function update() {
   refreshPaletteBadges();
   renderHand();
+  renderKongs();
   renderOpponentDiscards();
   renderSafety();
   const n = totalTiles();
@@ -355,18 +433,19 @@ function update() {
     return;
   }
 
-  if (n === 14) {
-    const analysis = analyzeWin(state.counts);
+  const target = handTarget();
+  if (n === target) {
+    const analysis = analyzeWin(state.counts, state.kongs);
     if (analysis.win) {
       const score = scoreHand(analysis, state.counts, state);
       setStatus(`🎉 Winning hand — ${score.total} tai${score.limited ? ` (limit; ${score.raw} before cap)` : ''}!`, 'win');
       renderScoreBreakdown(score);
     } else {
       setStatus(`Not a winning hand — ${analysis.reason}`, 'no-win');
-      renderDiscardAdvice();
+      if (state.kongs.length === 0) renderDiscardAdvice();
     }
-  } else if (n === 13) {
-    const waits = findWaits(state.counts);
+  } else if (n === target - 1) {
+    const waits = findWaits(state.counts, state.kongs);
     if (waits.length > 0) {
       setStatus(`✅ You are ready (tenpai)! Winning tile${waits.length > 1 ? 's' : ''}:`, 'tenpai');
       for (const t of waits) {
@@ -375,8 +454,10 @@ function update() {
     } else {
       setStatus('Not ready yet — no single tile completes this hand. See the closest patterns below.', 'building');
     }
+  } else if (n > target) {
+    setStatus(`Too many tiles — with ${state.kongs.length} kong${state.kongs.length > 1 ? 's' : ''} your hand holds ${target}; remove ${n - target}.`, 'no-win');
   } else {
-    setStatus(`Keep going — ${13 - n > 0 ? 13 - n + ' more tile(s) to a full 13-tile hand.' : 'you have ' + n + ' tiles.'}`, 'building');
+    setStatus(`Keep going — ${target - 1 - n} more tile(s) to a ready hand.`, 'building');
   }
 
   renderSuggestions();
@@ -795,6 +876,7 @@ buildPalette();
 buildTableControls();
 buildOpponentTabs();
 buildDiscardPalette();
+buildKongPalette();
 buildLearn();
 els.clearBtn.addEventListener('click', clearHand);
 

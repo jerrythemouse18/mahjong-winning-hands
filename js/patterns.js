@@ -204,6 +204,16 @@ const PATTERNS = [
     },
   },
   {
+    id: 'eighteen-arhats',
+    name: 'Eighteen Arhats (十八羅漢)',
+    tai: 5,
+    isLimit: true,
+    difficulty: 5,
+    example: '4× kong + any pair (18 tiles)',
+    description: 'Four kongs plus a pair — eighteen tiles in one hand. The rarest hand in Singapore mahjong; an automatic limit.',
+    detect: a => Array.isArray(a.kongs) && a.kongs.length === 4,
+  },
+  {
     id: 'thirteen-wonders',
     name: 'Thirteen Wonders (十三幺)',
     tai: 5,
@@ -218,8 +228,15 @@ const PATTERNS = [
 /** Return all named patterns matched by a winning hand. */
 function matchPatterns(analysis, counts) {
   if (!analysis.win) return [];
+  // Count-based detectors (flushes, dragons, terminals…) should see kong
+  // tiles as if they were in-hand pungs.
+  let effCounts = counts;
+  if (analysis.kongs && analysis.kongs.length) {
+    effCounts = counts.slice();
+    for (const t of analysis.kongs) effCounts[t] += 3;
+  }
   const matched = PATTERNS.filter(p => {
-    try { return p.detect(analysis, counts); } catch { return false; }
+    try { return p.detect(analysis, effCounts); } catch { return false; }
   });
   // A chicken hand is only "chicken" if nothing else matched.
   if (matched.length > 1) return matched.filter(p => p.id !== 'chicken-hand');

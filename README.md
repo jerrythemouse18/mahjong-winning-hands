@@ -105,10 +105,13 @@ A second tab alongside the hand analyzer for following a live session:
 
 The badge in the app's top-right corner shows the deployed version (`APP_VERSION` in `js/version.js`). Bump it in every release commit — after pushing, reload the live site and wait for the badge to change to confirm GitHub Pages has picked up the deploy.
 
+- **Kong support** — declare four-of-a-kind melds alongside your hand; each kong counts as a set (hand shrinks to 11/8/5/2 tiles), kongs feed pattern/tai detection (dragon and wind kongs, Pong Pong, flushes), and four kongs form **Eighteen Arhats (十八羅漢)**, a limit hand.
+- **Game-end settlement** — a Finish-game view in the tracker: final standings by net money, a who-pays-whom transfer list (at most 3 transfers), biggest-hand highlight, and a copy-to-clipboard summary for the group chat.
+
 ## Current limitations
 
-- Kong (four-of-a-kind) is treated as out of scope; enter the tiles as a pung plus a spare. This also rules out kong-dependent hands: Eighteen Arhats (十八羅漢) and Four Concealed Pungs (四暗刻) as a distinct concealed pattern.
 - Nine Gates is detected by tile shape only — the app can't know whether your hand was fully concealed, which the hand traditionally requires.
+- Four Concealed Pungs (四暗刻) as a distinct concealed pattern isn't modelled — the app doesn't track which sets were melded from discards.
 - Instant-win bonus hands (e.g. winning immediately from complete flower sets before play) are not modelled — bonus tiles contribute tai to a normal win only.
 - The discard advisor optimises for the standard 4-sets-plus-pair shape; it doesn't strategise for Thirteen Wonders.
 
