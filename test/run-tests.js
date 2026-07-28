@@ -8,7 +8,7 @@ const vm = require('vm');
 
 const ctx = { console };
 vm.createContext(ctx);
-for (const f of ['tiles.js', 'engine.js', 'patterns.js', 'suggestions.js', 'safety.js', 'scoring.js']) {
+for (const f of ['tiles.js', 'engine.js', 'patterns.js', 'suggestions.js', 'safety.js', 'scoring.js', 'practice.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 
@@ -381,6 +381,50 @@ console.log('discard safety:');
   check('ranking sorted safest first',
     ranked.every((r, i) => i === 0 || ranked[i - 1].score >= r.score), true);
   check('safest is the double-discarded 5s', ranked[0].tile, fiveS);
+}
+
+console.log('practice mode:');
+{
+  // Simple LCG for deterministic generation.
+  function lcg(seed) {
+    let s = seed;
+    return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 2 ** 32; };
+  }
+  // Generated waits quizzes are valid tenpai hands with correct waits.
+  for (let seed = 1; seed <= 20; seed++) {
+    const q = ctx.generateWaitsQuiz(lcg(seed));
+    const total = q.counts.reduce((a, b) => a + b, 0);
+    if (total !== 13 || q.waits.length === 0 ||
+        JSON.stringify(ctx.findWaits(q.counts)) !== JSON.stringify(q.waits)) {
+      check(`waits quiz seed ${seed} valid`, 'invalid', 'valid');
+    }
+  }
+  check('20 waits quizzes all valid', true, true);
+  // Discard quizzes: 14 tiles, not a win, meaningful choice.
+  for (let seed = 1; seed <= 20; seed++) {
+    const q = ctx.generateDiscardQuiz(lcg(seed + 100));
+    const total = q.counts.reduce((a, b) => a + b, 0);
+    if (total !== 14 || ctx.analyzeWin(q.counts).win || q.options.length === 0) {
+      check(`discard quiz seed ${seed} valid`, 'invalid', 'valid');
+    }
+  }
+  check('20 discard quizzes all valid', true, true);
+  // Waits grading.
+  const w = { waits: ctx.parseHand('3m 6m') };
+  check('waits: exact match correct', ctx.gradeWaits(ctx.parseHand('3m 6m'), w.waits).correct, true);
+  check('waits: missing one incorrect', ctx.gradeWaits(ctx.parseHand('3m'), w.waits).correct, false);
+  check('waits: extra tile incorrect', ctx.gradeWaits(ctx.parseHand('3m 6m 9m'), w.waits).correct, false);
+  check('waits: empty answer incorrect', ctx.gradeWaits([], w.waits).correct, false);
+  // Discard grading tiers.
+  const opts = [
+    { tile: 0, shanten: 0, ukeire: 8 },
+    { tile: 1, shanten: 0, ukeire: 4 },
+    { tile: 2, shanten: 1, ukeire: 12 },
+  ];
+  check('discard: best = full', ctx.gradeDiscard(0, opts).grade, 'full');
+  check('discard: same shanten lower ukeire = good', ctx.gradeDiscard(1, opts).grade, 'good');
+  check('discard: worse shanten = poor', ctx.gradeDiscard(2, opts).grade, 'poor');
+  check('discard: not in hand = invalid', ctx.gradeDiscard(33, opts).grade, 'invalid');
 }
 
 console.log('game tracker:');

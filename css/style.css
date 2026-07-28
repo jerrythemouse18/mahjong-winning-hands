@@ -502,6 +502,14 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .history-draw { color: var(--warn); font-style: italic; }
 .history-money { color: var(--accent); font-weight: 600; white-space: nowrap; }
 
+/* ---------- practice ---------- */
+.selected-tile { outline: 3px solid var(--accent); outline-offset: 1px; }
+.reveal-hit { outline: 3px solid var(--accent); outline-offset: 1px; }
+.reveal-extra { outline: 3px solid #ef4444; outline-offset: 1px; }
+.practice-palette-row { margin-bottom: 6px; }
+.practice-next { background: var(--panel-2); color: var(--text); border: 1px solid #3b4a63; margin-top: 8px; }
+#practice-result .status { margin-top: 12px; }
+
 /* ---------- kongs ---------- */
 .kong-row { min-height: 0; }
 .kong-row:empty::after {

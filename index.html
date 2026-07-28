@@ -15,8 +15,28 @@
     <nav id="app-tabs" class="app-tabs">
       <button type="button" class="app-tab active" data-view="analyzer">🀄 Hand analyzer</button>
       <button type="button" class="app-tab" data-view="tracker">📋 Game tracker</button>
+      <button type="button" class="app-tab" data-view="practice">🎓 Practice</button>
     </nav>
   </header>
+
+  <main id="view-practice" class="app-view" hidden>
+    <section id="practice-mode-section">
+      <h2>Choose a drill</h2>
+      <div id="practice-modes" class="stake-presets"></div>
+      <div id="practice-streak" class="tracker-chips"></div>
+    </section>
+    <section id="practice-question-section">
+      <h2 id="practice-title">Quiz</h2>
+      <div id="practice-hand" class="hand-row"></div>
+      <p id="practice-prompt" class="hint"></p>
+      <div id="practice-answer"></div>
+      <div id="practice-result"></div>
+      <div class="entry-actions">
+        <button id="practice-check" type="button" class="record-btn">Check answer</button>
+        <button id="practice-next" type="button" class="record-btn practice-next">Next hand →</button>
+      </div>
+    </section>
+  </main>
 
   <main id="view-tracker" class="app-view" hidden>
     <section id="tracker-state-section">
@@ -181,7 +201,9 @@
   <script src="js/safety.js"></script>
   <script src="js/scoring.js"></script>
   <script src="js/tracker.js"></script>
+  <script src="js/practice.js"></script>
   <script src="js/app.js"></script>
   <script src="js/tracker-ui.js"></script>
+  <script src="js/practice-ui.js"></script>
 </body>
 </html>

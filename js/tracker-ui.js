@@ -8,6 +8,7 @@ const tEls = {
   views: {
     analyzer: document.getElementById('view-analyzer'),
     tracker: document.getElementById('view-tracker'),
+    practice: document.getElementById('view-practice'),
   },
   state: document.getElementById('tracker-state'),
   stakes: document.getElementById('tracker-stakes'),
