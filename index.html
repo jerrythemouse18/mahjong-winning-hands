@@ -33,6 +33,10 @@
       <p class="hint">Money is settled from these stakes — the running totals on the player cards update instantly, including past hands if you change the stakes mid-game.</p>
       <div id="tracker-stakes" class="stakes-controls"></div>
       <div id="tracker-paymode" class="stake-presets pay-mode-row"></div>
+      <details id="tracker-payout-details" class="payout-details" open>
+        <summary>Payout reference table (tap to minimise)</summary>
+        <div id="tracker-payout-table"></div>
+      </details>
     </section>
 
     <section id="tracker-players-section">
@@ -99,7 +103,10 @@
         </label>
       </div>
       <div id="pay-mode" class="stake-presets pay-mode-row"></div>
-      <div id="payout-table"></div>
+      <details id="payout-details" class="payout-details" open>
+        <summary>Payout reference table (tap to minimise)</summary>
+        <div id="payout-table"></div>
+      </details>
       <h3 class="subhead">Bonus tiles you've drawn (flowers · seasons · animals)</h3>
       <div id="bonus-palette" class="palette-row"></div>
       <h3 class="subhead">Win context (only counts when your hand wins)</h3>

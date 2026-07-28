@@ -234,7 +234,7 @@ function buildTableControls() {
     renderPayoutTable();
     update();
   });
-  setStake(state.stake);
+  setStake(state.stake, false, true); // initial render — leave the table expanded
 
   for (const wc of WIN_CONTEXT) {
     const label = document.createElement('label');
@@ -253,13 +253,20 @@ function buildTableControls() {
   }
 }
 
-function setStake(base, fromCustom = false) {
+/** Collapse the payout reference once a stake is actively chosen. */
+function minimizePayoutDetails() {
+  const details = document.getElementById('payout-details');
+  if (details) details.open = false;
+}
+
+function setStake(base, fromCustom = false, fromInit = false) {
   state.stake = base;
   state.stakeTable = null;
   els.stakePresets.querySelectorAll('.stake-btn').forEach(btn => {
     btn.classList.toggle('active', !fromCustom && Number(btn.dataset.stake) === base);
   });
   if (!fromCustom) els.stakeCustom.value = '';
+  if (!fromInit) minimizePayoutDetails();
   renderPayoutTable();
   update();
 }
@@ -270,41 +277,53 @@ function setStakeTable(table) {
     btn.classList.toggle('active', btn.dataset.table === table.id);
   });
   els.stakeCustom.value = '';
+  minimizePayoutDetails();
   renderPayoutTable();
   update();
 }
 
 /** Reference table: cost per tai at the current stake, shooter vs non-shooter. */
-function renderPayoutTable() {
-  const base = state.stake;
-  const mode = state.payMode;
-  const bonus = state.selfDrawBonus;
+/**
+ * Shared payout-reference HTML for both the analyzer and the tracker tabs.
+ * opts: { base, mode, bonus, stakeTable, taiLimit }
+ */
+function payoutTableHTML({ base, mode, bonus, stakeTable, taiLimit }) {
   const rows = [];
-  for (let tai = 0; tai <= state.taiLimit; tai++) {
-    const p = payoutAmounts(tai, base, mode, bonus, state.stakeTable);
-    const label = tai === 0 ? '0 (chicken)*' : tai === state.taiLimit ? `${tai} (limit)` : String(tai);
+  for (let tai = 0; tai <= taiLimit; tai++) {
+    const p = payoutAmounts(tai, base, mode, bonus, stakeTable);
+    const label = tai === 0 ? '0 (chicken)*' : tai === taiLimit ? `${tai} (limit)` : String(tai);
     rows.push(`<tr><td>${label}</td><td>${fmtMoney(p.nonShooter)}</td><td>${fmtMoney(p.shooter)}</td><td>${fmtMoney(p.selfDrawEach)}</td><td>${fmtMoney(p.total)} / ${fmtMoney(p.selfDrawTotal)}</td></tr>`);
   }
-  const biteUnit = t => fmtMoney(payoutAmounts(t, base, 'half', 0, state.stakeTable).nonShooter);
+  const biteUnit = t => fmtMoney(payoutAmounts(t, base, 'half', 0, stakeTable).nonShooter);
   const biteRows =
     `<tr><td>Bite — open (kong/animal, ${BITE.open} tai)</td><td colspan="4">${biteUnit(BITE.open)} from every player</td></tr>` +
     `<tr><td>Bite — hidden kong (${BITE.hidden} tai)</td><td colspan="4">${biteUnit(BITE.hidden)} from every player</td></tr>`;
-  const modeHint = state.stakeTable
+  const modeHint = stakeTable
     ? (mode === 'shooter'
-      ? `${state.stakeTable.label} schedule, shooter mode (全銃): the discarder pays the fixed amount alone; the other two pay nothing.`
-      : `${state.stakeTable.label} schedule, everyone pays: all three players pay the fixed per-tai amount (no shooter doubling).`)
+      ? `${stakeTable.label} schedule, shooter mode (全銃): the discarder pays the fixed amount alone; the other two pay nothing.`
+      : `${stakeTable.label} schedule, everyone pays: all three players pay the fixed per-tai amount (no shooter doubling).`)
     : (mode === 'shooter'
       ? 'Shooter mode (全銃): whoever discards the winning tile pays the whole pot alone; the other two pay nothing.'
       : 'Everyone pays: the shooter (discarder) pays double, the other two pay the base rate.');
   const bonusHint = bonus > 0
     ? ` Self-draw column includes the ${fmtMoney(bonus)} bonus each player adds.`
     : '';
-  els.payoutTable.innerHTML = `
+  return `
     <table class="payout-ref">
       <thead><tr><th>Tai</th><th>Non-shooter pays</th><th>Shooter pays</th><th>Self-draw, each pays</th><th>Winner collects (discard / self-draw)</th></tr></thead>
       <tbody>${rows.join('')}${biteRows}</tbody>
     </table>
     <p class="hint">${modeHint} On self-draw, all three pay the doubled rate in either mode.${bonusHint} *Many tables don't pay chicken hands. Bites are collected immediately, win or not.</p>`;
+}
+
+function renderPayoutTable() {
+  els.payoutTable.innerHTML = payoutTableHTML({
+    base: state.stake,
+    mode: state.payMode,
+    bonus: state.selfDrawBonus,
+    stakeTable: state.stakeTable,
+    taiLimit: state.taiLimit,
+  });
 }
 
 /* ---------- analysis panel ---------- */

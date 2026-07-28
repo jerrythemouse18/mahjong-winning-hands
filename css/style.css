@@ -282,6 +282,17 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .pay-mode-btn { font-weight: 400; }
 .pay-mode-btn.active { font-weight: 700; }
 
+.payout-details { margin-top: 10px; }
+.payout-details summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 6px 0;
+  user-select: none;
+}
+.payout-details summary:hover { color: var(--text); }
+.payout-details[open] summary { color: var(--text); font-weight: 600; }
+
 .payout-ref { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
 .payout-ref th {
   text-align: left;
