@@ -58,25 +58,17 @@ function renderTrackerStakes() {
 
   const presets = document.createElement('div');
   presets.className = 'stake-presets';
-  for (const base of STAKE_PRESETS) {
+  for (const opt of stakeOptions()) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'stake-btn' + (s.stakeTableId === null && s.stake === base ? ' active' : '');
-    btn.textContent = base < 1 ? `${Math.round(base * 100)}¢` : `$${base}`;
+    const active = opt.table ? s.stakeTableId === opt.table.id
+      : (s.stakeTableId === null && s.stake === opt.base);
+    btn.className = 'stake-btn' + (active ? ' active' : '');
+    btn.textContent = opt.label;
+    if (opt.table) btn.title = 'Fixed shooter/self-draw schedules; everyone-pays doubles from the base';
     btn.addEventListener('click', () => {
-      s.stake = base; s.stakeTableId = null;
-      trackerSave(); renderTracker();
-    });
-    presets.appendChild(btn);
-  }
-  for (const table of STAKE_TABLES) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'stake-btn' + (s.stakeTableId === table.id ? ' active' : '');
-    btn.textContent = table.label;
-    btn.title = 'Fixed per-tai schedule';
-    btn.addEventListener('click', () => {
-      s.stakeTableId = table.id;
+      if (opt.table) s.stakeTableId = opt.table.id;
+      else { s.stake = opt.base; s.stakeTableId = null; }
       trackerSave(); renderTracker();
     });
     presets.appendChild(btn);

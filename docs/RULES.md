@@ -80,7 +80,7 @@ Tables settle discard wins one of two ways (selectable in the app):
 
 The winner collects the same total either way — the mode only changes who pays it.
 
-Some tables use a **fixed per-tai schedule** instead of the doubling formula — quoted like "3/6" ($0.30/$0.60). The app ships the common 3/6 table: in everyone-pays games each player pays $2 / $3 / $5 / $10 / $20 at 1–5 tai (self-draw uses the same schedule); in shooter games the discarder alone pays $4 / $7 / $11 / $20 / $40. Chicken hands aren't paid on these schedules, and tai above 5 clamp to the top row.
+The app also ships a hybrid **30¢ ("3/6")** stake: in everyone-pays games it behaves like a normal 30¢ base — non-shooter pays $0.30/$0.60/$1.20/$2.40/$4.80 at 1–5 tai, shooter double; in shooter games the discarder alone pays a fixed $4 / $7 / $11 / $20 / $40 schedule; self-draw collects a fixed $2 / $3 / $5 / $10 / $20 from every player. On the fixed schedules chicken hands pay nothing and tai above 5 clamp to the top row.
 
 ### Bites (instant payouts)
 

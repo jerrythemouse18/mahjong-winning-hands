@@ -181,23 +181,19 @@ function buildTableControls() {
     els.bonusPalette.appendChild(btn);
   }
 
-  for (const base of STAKE_PRESETS) {
+  for (const opt of stakeOptions()) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'stake-btn';
-    btn.dataset.stake = base;
-    btn.textContent = base < 1 ? `${Math.round(base * 100)}¢` : `$${base}`;
-    btn.addEventListener('click', () => setStake(base));
-    els.stakePresets.appendChild(btn);
-  }
-  for (const table of STAKE_TABLES) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'stake-btn';
-    btn.dataset.table = table.id;
-    btn.textContent = table.label;
-    btn.title = 'Fixed per-tai schedule instead of the doubling formula';
-    btn.addEventListener('click', () => setStakeTable(table));
+    if (opt.table) {
+      btn.dataset.table = opt.table.id;
+      btn.title = 'Fixed shooter/self-draw schedules; everyone-pays doubles from the base';
+      btn.addEventListener('click', () => setStakeTable(opt.table));
+    } else {
+      btn.dataset.stake = opt.base;
+      btn.addEventListener('click', () => setStake(opt.base));
+    }
+    btn.textContent = opt.label;
     els.stakePresets.appendChild(btn);
   }
   els.stakeCustom.addEventListener('input', () => {
@@ -276,6 +272,23 @@ function setStakeTable(table) {
 
 /** Reference table: cost per tai at the current stake, shooter vs non-shooter. */
 /**
+ * All stake choices — plain presets and schedule tables — as one list
+ * ordered by base value, so e.g. 30¢ sits between 25¢ and 50¢.
+ */
+function stakeOptions() {
+  const opts = [
+    ...STAKE_PRESETS.map(base => ({
+      base,
+      label: base < 1 ? `${Math.round(base * 100)}¢` : `$${base}`,
+      table: null,
+    })),
+    ...STAKE_TABLES.map(table => ({ base: table.base, label: table.label, table })),
+  ];
+  opts.sort((a, b) => a.base - b.base);
+  return opts;
+}
+
+/**
  * Shared payout-reference HTML for both the analyzer and the tracker tabs.
  * opts: { base, mode, bonus, stakeTable, taiLimit }
  */
@@ -290,10 +303,8 @@ function payoutTableHTML({ base, mode, bonus, stakeTable, taiLimit }) {
   const biteRows =
     `<tr><td>Bite — open (kong/animal, ${BITE.open} tai)</td><td colspan="4">${biteUnit(BITE.open)} from every player</td></tr>` +
     `<tr><td>Bite — hidden kong (${BITE.hidden} tai)</td><td colspan="4">${biteUnit(BITE.hidden)} from every player</td></tr>`;
-  const modeHint = stakeTable
-    ? (mode === 'shooter'
-      ? `${stakeTable.label} schedule, shooter mode (全銃): the discarder pays the fixed amount alone; the other two pay nothing.`
-      : `${stakeTable.label} schedule, everyone pays: all three players pay the fixed per-tai amount (no shooter doubling).`)
+  const modeHint = stakeTable && mode === 'shooter'
+    ? `${stakeTable.label} schedule, shooter mode (全銃): the discarder pays the fixed amount alone; the other two pay nothing.`
     : (mode === 'shooter'
       ? 'Shooter mode (全銃): whoever discards the winning tile pays the whole pot alone; the other two pay nothing.'
       : 'Everyone pays: the shooter (discarder) pays double, the other two pay the base rate.');
