@@ -234,7 +234,7 @@ function buildTableControls() {
     renderPayoutTable();
     update();
   });
-  setStake(state.stake, false, true); // initial render — leave the table expanded
+  setStake(state.stake);
 
   for (const wc of WIN_CONTEXT) {
     const label = document.createElement('label');
@@ -253,20 +253,13 @@ function buildTableControls() {
   }
 }
 
-/** Collapse the payout reference once a stake is actively chosen. */
-function minimizePayoutDetails() {
-  const details = document.getElementById('payout-details');
-  if (details) details.open = false;
-}
-
-function setStake(base, fromCustom = false, fromInit = false) {
+function setStake(base, fromCustom = false) {
   state.stake = base;
   state.stakeTable = null;
   els.stakePresets.querySelectorAll('.stake-btn').forEach(btn => {
     btn.classList.toggle('active', !fromCustom && Number(btn.dataset.stake) === base);
   });
   if (!fromCustom) els.stakeCustom.value = '';
-  if (!fromInit) minimizePayoutDetails();
   renderPayoutTable();
   update();
 }
@@ -277,7 +270,6 @@ function setStakeTable(table) {
     btn.classList.toggle('active', btn.dataset.table === table.id);
   });
   els.stakeCustom.value = '';
-  minimizePayoutDetails();
   renderPayoutTable();
   update();
 }

@@ -12,7 +12,6 @@ const tEls = {
   state: document.getElementById('tracker-state'),
   stakes: document.getElementById('tracker-stakes'),
   payMode: document.getElementById('tracker-paymode'),
-  payoutDetails: document.getElementById('tracker-payout-details'),
   payoutTable: document.getElementById('tracker-payout-table'),
   players: document.getElementById('tracker-players'),
   bite: document.getElementById('tracker-bite'),
@@ -66,7 +65,6 @@ function renderTrackerStakes() {
     btn.textContent = base < 1 ? `${Math.round(base * 100)}¢` : `$${base}`;
     btn.addEventListener('click', () => {
       s.stake = base; s.stakeTableId = null;
-      tEls.payoutDetails.open = false; // minimise once chosen
       trackerSave(); renderTracker();
     });
     presets.appendChild(btn);
@@ -79,7 +77,6 @@ function renderTrackerStakes() {
     btn.title = 'Fixed per-tai schedule';
     btn.addEventListener('click', () => {
       s.stakeTableId = table.id;
-      tEls.payoutDetails.open = false; // minimise once chosen
       trackerSave(); renderTracker();
     });
     presets.appendChild(btn);
