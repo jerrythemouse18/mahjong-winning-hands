@@ -98,6 +98,7 @@ A second tab alongside the hand analyzer for following a live session:
 - **Players** — four seats with editable names, live seat winds, and running totals (wins, tai won, self-draws, times shot).
 - **Record a hand with buttons only** — tap the winner (or Draw 流局), the tai count (0 up to your tai limit), self-draw 自摸 vs by-discard, and the shooter. Validation stops impossible entries (shooter = winner, discard without shooter).
 - **Bites & kongs** — record animals (1 tai), open kongs (1 tai), and hidden kongs (2 tai) as they happen mid-hand; they're logged into the history with a 💰 marker, counted per player (bites and bite tai), and don't advance the deal.
+- **Live money settlement** — set the tracker's stakes (base-cost presets, the 3/6 schedule, payment mode, self-draw bonus) and every player card shows a running net dollar position, recomputed from the full history: discard wins split shooter/non-shooter by the payment mode, self-draws collect from all three (plus bonus), and bites pay instantly. Totals are zero-sum and update retroactively if you change stakes mid-game.
 - **History, undo, reset** — every hand and bite logged newest-first; Undo removes the last entry (restoring dealer/wind for hands, leaving them untouched for bites); game state persists in your browser (localStorage) across reloads.
 
 ## Versioning

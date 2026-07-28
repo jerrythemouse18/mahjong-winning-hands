@@ -29,6 +29,8 @@ const tracker = {
   handNumber: 1,     // running count of hands played
   history: [],       // hand entries {kind:'hand', hand, wind, dealerSeat, winner, tai, how, shooter}
                      // and bite entries {kind:'bite', hand, wind, player, type, tai}
+  // stakes for money settlement (mirrors the analyzer's scheme)
+  stakes: { stake: 0.20, stakeTableId: null, payMode: 'half', selfDrawBonus: 0 },
   // entries-in-progress
   draft: { winner: null, tai: null, how: null, shooter: null },
   biteDraft: { player: null, type: null },
@@ -55,6 +57,9 @@ function trackerLoad() {
     if (Array.isArray(data.history)) {
       // Migrate entries saved before bite support: hands lacked a kind field.
       tracker.history = data.history.map(e => e.kind ? e : { ...e, kind: 'hand' });
+    }
+    if (data.stakes && typeof data.stakes === 'object') {
+      tracker.stakes = { ...tracker.stakes, ...data.stakes };
     }
   } catch (e) { /* corrupted storage — start fresh */ }
 }
@@ -152,6 +157,50 @@ function trackerTotals() {
     if (e.shooter !== null) totals[e.shooter].shot++;
   }
   return totals;
+}
+
+/** Resolve the tracker's stake-table id to a STAKE_TABLES entry (or null). */
+function trackerStakeTable() {
+  return STAKE_TABLES.find(t => t.id === tracker.stakes.stakeTableId) || null;
+}
+
+/**
+ * Per-player money flow, derived from history + current stakes.
+ * Returns [{net}] in dollars (positive = winning). Uses the analyzer's
+ * payoutAmounts scheme: self-draw = every other player pays the doubled
+ * rate (+bonus); discard = shooter/non-shooter split by pay mode; bites =
+ * every other player pays the per-player rate for the bite's tai.
+ */
+function trackerMoney() {
+  const s = tracker.stakes;
+  const table = trackerStakeTable();
+  const net = tracker.players.map(() => 0);
+  for (const e of tracker.history) {
+    if (e.kind === 'bite') {
+      const each = payoutAmounts(e.tai, s.stake, 'half', 0, table).nonShooter;
+      for (let i = 0; i < 4; i++) {
+        if (i === e.player) net[i] += each * 3;
+        else net[i] -= each;
+      }
+      continue;
+    }
+    if (e.winner === null) continue; // drawn hand — no money moves
+    const p = payoutAmounts(e.tai, s.stake, s.payMode, s.selfDrawBonus, table);
+    if (e.how === 'self-draw') {
+      for (let i = 0; i < 4; i++) {
+        if (i === e.winner) net[i] += p.selfDrawTotal;
+        else net[i] -= p.selfDrawEach;
+      }
+    } else {
+      // Discard win: shooter pays p.shooter, the other two pay p.nonShooter.
+      for (let i = 0; i < 4; i++) {
+        if (i === e.winner) net[i] += p.total;
+        else if (i === e.shooter) net[i] -= p.shooter;
+        else net[i] -= p.nonShooter;
+      }
+    }
+  }
+  return net;
 }
 
 /** Is the draft complete enough to record? */

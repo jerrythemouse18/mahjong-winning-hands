@@ -442,6 +442,10 @@ section h2 { margin: 0 0 12px; font-size: 1.1rem; }
 }
 .player-name:hover { text-decoration: underline; }
 .player-wind { color: var(--warn); font-size: 0.82rem; margin: 4px 0; }
+.player-money { font-size: 1.05rem; font-weight: 700; margin: 4px 0 6px; }
+.player-money.winning { color: var(--accent); }
+.player-money.losing { color: #f87171; }
+.player-money.even { color: var(--muted); }
 .player-stats { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
 
 .entry-row { margin-bottom: 14px; }

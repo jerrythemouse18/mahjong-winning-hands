@@ -10,6 +10,8 @@ const tEls = {
     tracker: document.getElementById('view-tracker'),
   },
   state: document.getElementById('tracker-state'),
+  stakes: document.getElementById('tracker-stakes'),
+  payMode: document.getElementById('tracker-paymode'),
   players: document.getElementById('tracker-players'),
   bite: document.getElementById('tracker-bite'),
   entry: document.getElementById('tracker-entry'),
@@ -47,11 +49,76 @@ function renderTrackerState() {
     </div>`;
 }
 
+/* ---------- stakes ---------- */
+
+function renderTrackerStakes() {
+  tEls.stakes.innerHTML = '';
+  const s = tracker.stakes;
+
+  const presets = document.createElement('div');
+  presets.className = 'stake-presets';
+  for (const base of STAKE_PRESETS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stake-btn' + (s.stakeTableId === null && s.stake === base ? ' active' : '');
+    btn.textContent = base < 1 ? `${Math.round(base * 100)}¢` : `$${base}`;
+    btn.addEventListener('click', () => {
+      s.stake = base; s.stakeTableId = null;
+      trackerSave(); renderTracker();
+    });
+    presets.appendChild(btn);
+  }
+  for (const table of STAKE_TABLES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stake-btn' + (s.stakeTableId === table.id ? ' active' : '');
+    btn.textContent = table.label;
+    btn.title = 'Fixed per-tai schedule';
+    btn.addEventListener('click', () => {
+      s.stakeTableId = table.id;
+      trackerSave(); renderTracker();
+    });
+    presets.appendChild(btn);
+  }
+  tEls.stakes.appendChild(presets);
+
+  const bonusLabel = document.createElement('label');
+  bonusLabel.className = 'custom-stake';
+  bonusLabel.textContent = 'Self-draw bonus (each): $';
+  const bonusInput = document.createElement('input');
+  bonusInput.type = 'number';
+  bonusInput.min = '0';
+  bonusInput.step = '0.10';
+  bonusInput.value = s.selfDrawBonus || '';
+  bonusInput.placeholder = '0';
+  bonusInput.addEventListener('change', () => {
+    const v = parseFloat(bonusInput.value);
+    s.selfDrawBonus = v >= 0 ? v : 0;
+    trackerSave(); renderTracker();
+  });
+  bonusLabel.appendChild(bonusInput);
+  tEls.stakes.appendChild(bonusLabel);
+
+  tEls.payMode.innerHTML = '';
+  for (const m of PAY_MODES) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stake-btn pay-mode-btn' + (s.payMode === m.id ? ' active' : '');
+    btn.textContent = m.name;
+    btn.addEventListener('click', () => {
+      s.payMode = m.id;
+      trackerSave(); renderTracker();
+    });
+    tEls.payMode.appendChild(btn);
+  }
+}
+
 /* ---------- players ---------- */
 
 function renderTrackerPlayers() {
   tEls.players.innerHTML = '';
   const totals = trackerTotals();
+  const money = trackerMoney();
   tracker.players.forEach((name, i) => {
     const card = document.createElement('div');
     card.className = 'player-card' + (i === tracker.dealerSeat ? ' dealer' : '');
@@ -73,6 +140,12 @@ function renderTrackerPlayers() {
     wind.className = 'player-wind';
     wind.textContent = seatWindOf(i);
     card.appendChild(wind);
+    const net = document.createElement('div');
+    const amount = money[i];
+    net.className = 'player-money ' + (amount > 0.005 ? 'winning' : amount < -0.005 ? 'losing' : 'even');
+    net.textContent = (amount > 0 ? '+' : '') + fmtMoney(amount).replace('$-', '-$');
+    net.title = 'Net position at current stakes';
+    card.appendChild(net);
     const stats = document.createElement('div');
     stats.className = 'player-stats';
     const t = totals[i];
@@ -245,6 +318,7 @@ function renderTrackerHistory() {
 
 function renderTracker() {
   renderTrackerState();
+  renderTrackerStakes();
   renderTrackerPlayers();
   renderTrackerBite();
   renderTrackerEntry();

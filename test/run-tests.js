@@ -343,7 +343,9 @@ console.log('game tracker:');
 {
   const tctx = { console, localStorage: { getItem: () => null, setItem: () => {} } };
   vm.createContext(tctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'tracker.js'), 'utf8'), tctx, { filename: 'tracker.js' });
+  for (const f of ['tiles.js', 'engine.js', 'patterns.js', 'scoring.js', 'tracker.js']) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), tctx, { filename: f });
+  }
   const T = (expr) => vm.runInContext(expr, tctx);
 
   // Non-dealer win by discard: deal passes right.
@@ -430,6 +432,46 @@ console.log('game tracker:');
   T("tracker.biteDraft = { player: null, type: 'animal' }");
   T('trackerRecordBite()');
   check('incomplete bite ignored', T('tracker.history.length'), 1);
+  // --- money settlement ---
+  T('trackerReset()');
+  T("tracker.stakes = { stake: 1.00, stakeTableId: null, payMode: 'half', selfDrawBonus: 0 }");
+  // 1-tai discard win at $1 base: winner +$4, shooter -$2, others -$1.
+  T("tracker.draft = { winner: 0, tai: 1, how: 'discard', shooter: 1 }");
+  T('trackerRecordHand()');
+  let m = T('trackerMoney()');
+  check('discard win money split', m, [4, -2, -1, -1]);
+  // Self-draw 1 tai with $2 bonus: everyone pays 2+2=4, winner +$12.
+  T("tracker.stakes.selfDrawBonus = 2");
+  T("tracker.draft = { winner: 2, tai: 1, how: 'self-draw', shooter: null }");
+  T('trackerRecordHand()');
+  m = T('trackerMoney()');
+  check('self-draw money with bonus', m, [0, -6, 11, -5]);
+  // Zero-sum invariant.
+  check('money is zero-sum', m.reduce((a, b) => a + b, 0), 0);
+  // Bite: 1-tai animal at $1 base — player 3 collects $1 from each.
+  T("tracker.biteDraft = { player: 3, type: 'animal' }");
+  T('trackerRecordBite()');
+  m = T('trackerMoney()');
+  check('bite money flows', m, [-1, -7, 10, -2]);
+  // Shooter mode: discarder pays the whole pot.
+  T('trackerReset()');
+  T("tracker.stakes = { stake: 1.00, stakeTableId: null, payMode: 'shooter', selfDrawBonus: 0 }");
+  T("tracker.draft = { winner: 0, tai: 1, how: 'discard', shooter: 2 }");
+  T('trackerRecordHand()');
+  m = T('trackerMoney()');
+  check('shooter-pays-all money split', m, [4, 0, -4, 0]);
+  // 3/6 table: shooter alone pays the schedule ($4 at 1 tai).
+  T('trackerReset()');
+  T("tracker.stakes = { stake: 0.20, stakeTableId: 'three-six', payMode: 'shooter', selfDrawBonus: 0 }");
+  T("tracker.draft = { winner: 1, tai: 1, how: 'discard', shooter: 0 }");
+  T('trackerRecordHand()');
+  m = T('trackerMoney()');
+  check('3/6 shooter schedule money', m, [-4, 4, 0, 0]);
+  // Drawn hands move no money.
+  T("tracker.draft = { winner: null, tai: null, how: 'draw', shooter: null }");
+  T('trackerRecordHand()');
+  check('draw moves no money', T('trackerMoney()'), [-4, 4, 0, 0]);
+
   // Legacy entries without kind are migrated on load.
   const legacyCtx = { console, localStorage: {
     getItem: () => JSON.stringify({ players: ['A','B','C','D'], prevailingWind: 0, dealerSeat: 0, handNumber: 2,
